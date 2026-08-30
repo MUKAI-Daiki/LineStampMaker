@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Camera, Pen, Eraser, Undo, ArrowRight, Image as ImageIcon, Download, Printer, Check, Shuffle, Trash2, X, Square, Hand, FolderOpen, Plus, LogOut } from 'lucide-react';
+import { Camera, Pen, Eraser, Undo, ArrowRight, Image as ImageIcon, Download, Printer, Check, Shuffle, Trash2, X, Square, Hand, FolderOpen, Plus, LogOut, Crop, RotateCcw } from 'lucide-react';
 import { promptKeywords, type Mode, type PromptKeyword } from './promptKeywords';
 import { generatePdfBlobUrl, generatePdfBytes } from './utils/pdfGenerator';
 import { prepareStampZipAndGenerateQr } from './utils/zipService';
@@ -379,6 +379,14 @@ export default function App({ userId, isAdmin }: AppProps) {
   const [adjustRawImage, setAdjustRawImage] = useState<string | null>(null);
   const [adjustContrast, setAdjustContrast] = useState<number>(150);
   const [adjustBrightness, setAdjustBrightness] = useState<number>(120);
+  const [lastRawImage, setLastRawImage] = useState<string | null>(null);
+
+  // トリミング関連State
+  const [cropBox, setCropBox] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+  const [isDraggingCrop, setIsDraggingCrop] = useState(false);
+  const [cropDragStart, setCropDragStart] = useState<{ x: number; y: number } | null>(null);
+  const adjustContainerRef = useRef<HTMLDivElement>(null);
+  const adjustImgRef = useRef<HTMLImageElement>(null);
 
   // 共通のドキュメントスキャナ処理 (コントラスト・明度のCSSフィルタ適用後 → 適応的白黒化)
   const processImageToCanvas = (img: HTMLImageElement, contrast: number = 150, brightness: number = 120) => {
@@ -445,6 +453,10 @@ export default function App({ userId, isAdmin }: AppProps) {
   const openAdjustModal = (dataUrl: string) => {
     setAdjustContrast(150);
     setAdjustBrightness(120);
+    setCropBox(null);
+    setIsDraggingCrop(false);
+    setCropDragStart(null);
+    setLastRawImage(dataUrl);
     setAdjustRawImage(dataUrl);
   };
 
@@ -452,14 +464,85 @@ export default function App({ userId, isAdmin }: AppProps) {
     if (!adjustRawImage) return;
     const img = new Image();
     img.onload = () => {
+      if (cropBox) {
+        const sx = Math.round(Math.min(cropBox.x1, cropBox.x2) * img.naturalWidth);
+        const sy = Math.round(Math.min(cropBox.y1, cropBox.y2) * img.naturalHeight);
+        const sw = Math.round(Math.abs(cropBox.x2 - cropBox.x1) * img.naturalWidth);
+        const sh = Math.round(Math.abs(cropBox.y2 - cropBox.y1) * img.naturalHeight);
+        if (sw > 10 && sh > 10) {
+          const cropCanvas = document.createElement('canvas');
+          cropCanvas.width = sw;
+          cropCanvas.height = sh;
+          const cropCtx = cropCanvas.getContext('2d');
+          if (cropCtx) {
+            cropCtx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+            const croppedImg = new Image();
+            croppedImg.onload = () => {
+              processImageToCanvas(croppedImg, adjustContrast, adjustBrightness);
+              setAdjustRawImage(null);
+              setCropBox(null);
+            };
+            croppedImg.src = cropCanvas.toDataURL('image/png');
+            return;
+          }
+        }
+      }
       processImageToCanvas(img, adjustContrast, adjustBrightness);
       setAdjustRawImage(null);
+      setCropBox(null);
     };
     img.src = adjustRawImage;
   };
 
   const cancelAdjust = () => {
     setAdjustRawImage(null);
+    setCropBox(null);
+  };
+
+  const getImageBoundsInContainer = (container: HTMLElement, natW: number, natH: number) => {
+    const cw = container.clientWidth;
+    const ch = container.clientHeight;
+    const scale = Math.min(cw / natW, ch / natH);
+    const w = natW * scale;
+    const h = natH * scale;
+    return { x: (cw - w) / 2, y: (ch - h) / 2, w, h };
+  };
+
+  const screenToImageCoords = (clientX: number, clientY: number): { x: number; y: number } | null => {
+    const container = adjustContainerRef.current;
+    const imgEl = adjustImgRef.current;
+    if (!container || !imgEl) return null;
+    const rect = container.getBoundingClientRect();
+    const bounds = getImageBoundsInContainer(container, imgEl.naturalWidth, imgEl.naturalHeight);
+    const rx = clientX - rect.left - bounds.x;
+    const ry = clientY - rect.top - bounds.y;
+    return { x: Math.max(0, Math.min(1, rx / bounds.w)), y: Math.max(0, Math.min(1, ry / bounds.h)) };
+  };
+
+  const handleCropPointerDown = (e: React.PointerEvent) => {
+    const coords = screenToImageCoords(e.clientX, e.clientY);
+    if (!coords) return;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    setIsDraggingCrop(true);
+    setCropDragStart(coords);
+    setCropBox({ x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y });
+  };
+
+  const handleCropPointerMove = (e: React.PointerEvent) => {
+    if (!isDraggingCrop || !cropDragStart) return;
+    const coords = screenToImageCoords(e.clientX, e.clientY);
+    if (!coords) return;
+    setCropBox({ x1: cropDragStart.x, y1: cropDragStart.y, x2: coords.x, y2: coords.y });
+  };
+
+  const handleCropPointerUp = () => {
+    setIsDraggingCrop(false);
+    setCropDragStart(null);
+    if (cropBox) {
+      const w = Math.abs(cropBox.x2 - cropBox.x1);
+      const h = Math.abs(cropBox.y2 - cropBox.y1);
+      if (w < 0.03 || h < 0.03) setCropBox(null);
+    }
   };
 
   // Webカメラの起動
@@ -1439,6 +1522,16 @@ ${tabPromptText ? `\n## 追加指示\n- ${tabPromptText}` : ''}`;
                     <ImageIcon size={16} /> {mode === 'easy' ? 'がぞうをえらぶ' : '画像ファイル選択'}
                     <input type="file" accept="image/*" className="hidden" onChange={handleCameraUpload} />
                   </label>
+
+                  {lastRawImage && history.length > 0 && (
+                    <button
+                      onClick={() => openAdjustModal(lastRawImage)}
+                      className="p-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors border border-amber-200"
+                      title="取り込み画像を再調整"
+                    >
+                      <RotateCcw size={16} /> {mode === 'easy' ? 'もういちど ちょうせい' : '取り込み再調整'}
+                    </button>
+                  )}
 
                   {isDebugMode && (
                     <button
@@ -2512,7 +2605,7 @@ ${tabPromptText ? `\n## 追加指示\n- ${tabPromptText}` : ''}`;
         </div>
       )}
 
-      {/* 画像調整モーダル (コントラスト・明度スライダー) */}
+      {/* 画像調整モーダル (トリミング・コントラスト・明度スライダー) */}
       {adjustRawImage && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl flex flex-col items-center relative border border-gray-100">
@@ -2527,17 +2620,86 @@ ${tabPromptText ? `\n## 追加指示\n- ${tabPromptText}` : ''}`;
             <h3 className={`font-bold text-gray-800 mb-1 flex items-center gap-2 ${mode === 'easy' ? 'text-xl' : 'text-lg'}`}>
               {mode === 'easy' ? 'えをちょうせい' : '線画の調整'}
             </h3>
-            <p className={`text-gray-500 mb-4 ${mode === 'easy' ? 'text-sm' : 'text-xs'}`}>
-              {mode === 'easy' ? 'スライダーで 線のこさ と あかるさ を かえてね' : 'スライダーで線画の見え方を調整してから取り込みます'}
+            <p className={`text-gray-500 mb-3 ${mode === 'easy' ? 'text-sm' : 'text-xs'}`}>
+              {mode === 'easy' ? 'ドラッグでトリミング、スライダーでちょうせい' : 'ドラッグで範囲を切り抜き、スライダーで濃さと明るさを調整'}
             </p>
 
-            <div className="w-full aspect-square max-w-[360px] bg-white rounded-2xl overflow-hidden border-2 border-gray-200 shadow-inner mb-5">
+            {/* トリミング＆プレビューエリア */}
+            <div
+              ref={adjustContainerRef}
+              className="w-full aspect-square max-w-[360px] bg-white rounded-2xl overflow-hidden border-2 border-gray-200 shadow-inner mb-3 relative select-none"
+              style={{ touchAction: 'none', cursor: 'crosshair' }}
+              onPointerDown={handleCropPointerDown}
+              onPointerMove={handleCropPointerMove}
+              onPointerUp={handleCropPointerUp}
+            >
               <img
+                ref={adjustImgRef}
                 src={adjustRawImage}
                 alt="調整プレビュー"
-                className="w-full h-full object-contain"
+                className="w-full h-full object-contain pointer-events-none"
                 style={{ filter: `contrast(${adjustContrast}%) brightness(${adjustBrightness}%)` }}
               />
+              {/* 切り抜き範囲のオーバーレイ */}
+              {cropBox && adjustContainerRef.current && adjustImgRef.current && (() => {
+                const container = adjustContainerRef.current!;
+                const imgEl = adjustImgRef.current!;
+                const bounds = getImageBoundsInContainer(container, imgEl.naturalWidth, imgEl.naturalHeight);
+                const left = bounds.x + Math.min(cropBox.x1, cropBox.x2) * bounds.w;
+                const top = bounds.y + Math.min(cropBox.y1, cropBox.y2) * bounds.h;
+                const width = Math.abs(cropBox.x2 - cropBox.x1) * bounds.w;
+                const height = Math.abs(cropBox.y2 - cropBox.y1) * bounds.h;
+                return (
+                  <>
+                    {/* Dark overlay outside crop region */}
+                    <div className="absolute inset-0 pointer-events-none" style={{
+                      background: `linear-gradient(to right,
+                        rgba(0,0,0,0.5) ${left}px,
+                        transparent ${left}px,
+                        transparent ${left + width}px,
+                        rgba(0,0,0,0.5) ${left + width}px)`
+                    }} />
+                    <div className="absolute pointer-events-none" style={{
+                      left: `${left}px`, top: 0, width: `${width}px`, height: `${top}px`,
+                      background: 'rgba(0,0,0,0.5)'
+                    }} />
+                    <div className="absolute pointer-events-none" style={{
+                      left: `${left}px`, top: `${top + height}px`, width: `${width}px`,
+                      bottom: 0, background: 'rgba(0,0,0,0.5)'
+                    }} />
+                    {/* Crop border */}
+                    <div className="absolute pointer-events-none border-2 border-white" style={{
+                      left: `${left}px`, top: `${top}px`, width: `${width}px`, height: `${height}px`,
+                      boxShadow: '0 0 0 1px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(255,255,255,0.3)'
+                    }}>
+                      {/* Corner handles */}
+                      {[[0,0],[1,0],[0,1],[1,1]].map(([cx,cy]) => (
+                        <div key={`${cx}-${cy}`} className="absolute w-3 h-3 bg-white border-2 border-green-500 rounded-sm pointer-events-none" style={{
+                          left: cx ? 'auto' : '-6px', right: cx ? '-6px' : 'auto',
+                          top: cy ? 'auto' : '-6px', bottom: cy ? '-6px' : 'auto'
+                        }} />
+                      ))}
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+
+            {/* トリミングリセットボタン */}
+            <div className="w-full flex justify-between items-center mb-3">
+              <span className={`font-bold text-gray-500 flex items-center gap-1 ${mode === 'easy' ? 'text-xs' : 'text-[11px]'}`}>
+                <Crop size={13} /> {cropBox
+                  ? (mode === 'easy' ? 'きりぬきON' : 'トリミング範囲あり')
+                  : (mode === 'easy' ? 'ドラッグできりぬき' : 'ドラッグで範囲指定')}
+              </span>
+              {cropBox && (
+                <button
+                  onClick={() => setCropBox(null)}
+                  className="text-xs font-bold text-red-500 hover:text-red-700 flex items-center gap-1 transition-colors"
+                >
+                  <X size={13} /> {mode === 'easy' ? 'リセット' : 'トリミング解除'}
+                </button>
+              )}
             </div>
 
             <div className="w-full space-y-4 mb-5">
