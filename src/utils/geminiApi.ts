@@ -14,6 +14,23 @@ export const NEGATIVE_PROMPT = `
 - 画像の外枠に密着した描画（※LINEスタンプ公式規約に従い、画像外枠とコンテンツの間に必ず10pxの余白を空けること）
 - 背景への影・グラデーション・白背景・柄（背景は単色のどぎつい鮮やかな濃い紫色・クロマキーマゼンタ #FF00FF のみとすること）`;
 
+const GEMINI_DIRECT_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+
+function buildGeminiRequestBody(prompt: string, imageBase64: string) {
+  return {
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          { inlineData: { mimeType: 'image/png', data: imageBase64 } },
+          { text: prompt },
+        ],
+      },
+    ],
+    generationConfig: { seed: 42 },
+  };
+}
+
 export async function callGeminiImageApi(
   selectedModel: string,
   prompt: string,
@@ -25,57 +42,59 @@ export async function callGeminiImageApi(
   overrideModel?: string
 ): Promise<string> {
   const local = isLocalDev();
-  let accessToken: string | undefined;
-
-  if (!local) {
-    const { data: { session } } = await supabase.auth.getSession();
-    accessToken = session?.access_token;
-    if (!accessToken) {
-      const msg = "ログインの有効期限が切れました。再度ログインしてください。";
-      console.warn(msg);
-      if (onError) onError(msg);
-      return PLACEHOLDER_IMG;
-    }
-  }
-
+  const modelName = overrideModel || selectedModel;
   const cleanBase64 = await ensureBase64PngData(inputImageBase64, isLineArt);
   const fullPrompt = prompt + NEGATIVE_PROMPT;
 
-  const modelName = overrideModel || selectedModel;
-  const apiEndpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gemini-image`;
-
-  const requestPayload = {
-    model: modelName,
-    prompt: fullPrompt,
-    imageBase64: cleanBase64,
-  };
-
   console.group("🚀 【画像生成リクエスト送信】");
   console.log("📌 送信モデル:", modelName);
+  console.log("📌 モード:", local ? "ローカル直接呼び出し" : "Edge Function経由");
   console.log("📄 送信プロンプト:\n", fullPrompt);
   console.groupEnd();
-
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-  if (accessToken) {
-    headers['Authorization'] = `Bearer ${accessToken}`;
-  }
 
   const controller = new AbortController();
   abortControllerRef.current = controller;
   const timeoutId = setTimeout(() => controller.abort(), 30000);
 
   try {
-    const response = await fetch(
-      apiEndpoint,
-      {
-        method: 'POST',
-        headers,
-        signal: controller.signal,
-        body: JSON.stringify(requestPayload),
+    let apiUrl: string;
+    let headers: Record<string, string>;
+    let body: string;
+
+    if (local) {
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) {
+        const msg = ".envファイルに VITE_GEMINI_API_KEY が設定されていません。APIキーを記入してください。";
+        console.warn(msg);
+        if (onError) onError(msg);
+        return PLACEHOLDER_IMG;
       }
-    );
+      apiUrl = `${GEMINI_DIRECT_URL}/${encodeURIComponent(modelName)}:generateContent?key=${apiKey}`;
+      headers = { 'Content-Type': 'application/json' };
+      body = JSON.stringify(buildGeminiRequestBody(fullPrompt, cleanBase64));
+    } else {
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      if (!accessToken) {
+        const msg = "ログインの有効期限が切れました。再度ログインしてください。";
+        console.warn(msg);
+        if (onError) onError(msg);
+        return PLACEHOLDER_IMG;
+      }
+      apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gemini-image`;
+      headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      };
+      body = JSON.stringify({ model: modelName, prompt: fullPrompt, imageBase64: cleanBase64 });
+    }
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers,
+      signal: controller.signal,
+      body,
+    });
 
     clearTimeout(timeoutId);
 
@@ -86,7 +105,7 @@ export async function callGeminiImageApi(
         errorMsg = "API利用上限（レート制限）に達しました。しばらく時間をおいて再試行してください。";
       } else if (response.status === 401 || response.status === 403) {
         errorMsg = local
-          ? "ローカル環境では画像生成機能は利用できません（認証が必要です）。"
+          ? "APIキーが無効です。.envファイルの VITE_GEMINI_API_KEY を確認してください。"
           : "この機能を利用する権限がありません。大学（nua.ac.jp）のアカウントでログインしてください。";
       } else if (response.status === 503) {
         errorMsg = "サーバー側の画像生成キーが未設定です。管理者に連絡してください。";
