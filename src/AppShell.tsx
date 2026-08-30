@@ -1,10 +1,13 @@
+import { useState } from 'react';
 import { useAuth } from './utils/useAuth';
 import LoginPage from './pages/LoginPage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
+import OnboardingPage from './pages/OnboardingPage';
 import App from './App';
 
 export default function AppShell() {
   const { session, user, isLoading, isAllowedDomain, isAdmin } = useAuth();
+  const [showOnboarding, setShowOnboarding] = useState(true);
 
   if (isLoading) {
     return (
@@ -27,6 +30,10 @@ export default function AppShell() {
 
   if (isAllowedDomain === false) {
     return <UnauthorizedPage />;
+  }
+
+  if (showOnboarding) {
+    return <OnboardingPage onStart={() => setShowOnboarding(false)} />;
   }
 
   return <App userId={user?.id} isAdmin={isAdmin} />;
