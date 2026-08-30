@@ -1,4 +1,5 @@
 import { ensureBase64PngData, processStampImage } from './stampProcessing';
+import { supabase } from './supabaseClient';
 
 const PLACEHOLDER_IMG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==";
 
@@ -13,7 +14,6 @@ export const NEGATIVE_PROMPT = `
 - 背景への影・グラデーション・白背景・柄（背景は単色のどぎつい鮮やかな濃い紫色・クロマキーマゼンタ #FF00FF のみとすること）`;
 
 export async function callGeminiImageApi(
-  apiKey: string,
   selectedModel: string,
   prompt: string,
   inputImageBase64: string,
@@ -23,8 +23,10 @@ export async function callGeminiImageApi(
   isLineArt: boolean = false,
   overrideModel?: string
 ): Promise<string> {
-  if (!apiKey || apiKey === 'your_gemini_api_key_here') {
-    const msg = "Gemini API Keyが未設定です。.env ファイルに有効な API Key を設定してください。";
+  const { data: { session } } = await supabase.auth.getSession();
+  const accessToken = session?.access_token;
+  if (!accessToken) {
+    const msg = "ログインの有効期限が切れました。再度ログインしてください。";
     console.warn(msg);
     if (onError) onError(msg);
     return PLACEHOLDER_IMG;
@@ -34,32 +36,18 @@ export async function callGeminiImageApi(
   const fullPrompt = prompt + NEGATIVE_PROMPT;
 
   const modelName = overrideModel || selectedModel;
-  const apiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+  // API キーはサーバー側（Edge Function のシークレット）にのみ保持する
+  const apiEndpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gemini-image`;
 
   const requestPayload = {
-    contents: [
-      {
-        role: "user",
-        parts: [
-          {
-            inlineData: {
-              mimeType: 'image/png',
-              data: cleanBase64,
-            },
-          },
-          { text: fullPrompt },
-        ],
-      },
-    ],
-    generationConfig: {
-      seed: 42,
-    },
+    model: modelName,
+    prompt: fullPrompt,
+    imageBase64: cleanBase64,
   };
 
-  console.group("🚀 【Gemini API 送信リクエスト】");
+  console.group("🚀 【画像生成リクエスト送信】");
   console.log("📌 送信モデル:", modelName);
   console.log("📄 送信プロンプト:\n", fullPrompt);
-  console.log("📦 送信ペイロード (Request Payload):", requestPayload);
   console.groupEnd();
 
   const controller = new AbortController();
@@ -73,6 +61,7 @@ export async function callGeminiImageApi(
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
         },
         signal: controller.signal,
         body: JSON.stringify(requestPayload),
@@ -83,13 +72,17 @@ export async function callGeminiImageApi(
 
     if (!response.ok) {
       const errorText = await response.text();
-      let errorMsg = `APIエラー (${response.status})`;
+      let errorMsg = `画像生成エラー (${response.status})`;
       if (response.status === 429) {
         errorMsg = "API利用上限（レート制限）に達しました。しばらく時間をおいて再試行してください。";
+      } else if (response.status === 401 || response.status === 403) {
+        errorMsg = "この機能を利用する権限がありません。大学（nua.ac.jp）のアカウントでログインしてください。";
+      } else if (response.status === 503) {
+        errorMsg = "サーバー側の画像生成キーが未設定です。管理者に連絡してください。";
       } else if (response.status >= 500) {
-        errorMsg = "Google APIサーバーで問題が発生しています。再度お試しください。";
+        errorMsg = "画像生成サーバーで問題が発生しています。再度お試しください。";
       }
-      console.error("❌ Gemini API Error Response:", errorText);
+      console.error("❌ 画像生成エラー応答:", errorText);
       if (onError) onError(errorMsg);
       return PLACEHOLDER_IMG;
     }
@@ -131,7 +124,6 @@ export async function callGeminiImageApi(
 }
 
 export async function callGeminiImageApiWithRetry(
-  apiKey: string,
   selectedModel: string,
   prompt: string,
   inputImageBase64: string,
@@ -145,7 +137,6 @@ export async function callGeminiImageApiWithRetry(
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     if (isCancelledRef.current) break;
     const res = await callGeminiImageApi(
-      apiKey,
       selectedModel,
       prompt,
       inputImageBase64,

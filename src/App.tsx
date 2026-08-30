@@ -11,8 +11,6 @@ import { signOut } from './utils/useAuth';
 import { useStamina } from './utils/useStamina';
 import { Zap } from 'lucide-react';
 
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
-
 interface StyleItem {
   id: string;
   label: string;
@@ -624,7 +622,7 @@ ${baseFreeText ? `\n## 追加指示\n- ${baseFreeText}` : ''}`;
       || (canvasRef.current ? canvasRef.current.toDataURL('image/png') : null)
       || (history.length > 0 ? history[history.length - 1] : PLACEHOLDER_IMG);
 
-    const resultImg = await callGeminiImageApi(GEMINI_API_KEY, selectedModel, prompt, inputCanvasData, abortControllerRef, isCancelledRef, (msg) => setApiErrorMessage(msg), true);
+    const resultImg = await callGeminiImageApi(selectedModel, prompt, inputCanvasData, abortControllerRef, isCancelledRef, (msg) => setApiErrorMessage(msg), true);
     setBaseImage(resultImg);
     setIsGeneratingBase(false);
     setShowBaseConfirm(true);
@@ -713,7 +711,7 @@ ${stampFreeText ? `\n## 追加指示\n- ${stampFreeText}` : ''}`;
     console.log(`【スタンプ生成プロンプト (${selectedModel} / 固定seed: 42)】:\n`, promptToUse + NEGATIVE_PROMPT);
 
     const inputCanvasData = baseImage || (canvasRef.current ? canvasRef.current.toDataURL('image/png') : PLACEHOLDER_IMG);
-    const resultImg = await callGeminiImageApiWithRetry(GEMINI_API_KEY, selectedModel, promptToUse, inputCanvasData, abortControllerRef, isCancelledRef, (msg) => setApiErrorMessage(msg));
+    const resultImg = await callGeminiImageApiWithRetry(selectedModel, promptToUse, inputCanvasData, abortControllerRef, isCancelledRef, (msg) => setApiErrorMessage(msg));
 
     if (resultImg && resultImg !== PLACEHOLDER_IMG) {
       setCurrentStampResult(resultImg);
@@ -753,7 +751,7 @@ ${stampFreeText ? `\n## 追加指示\n- ${stampFreeText}` : ''}`;
 ${mainPromptText ? `\n## 追加指示\n- ${mainPromptText}` : ''}`;
 
     console.log(`【Step4進入時 メイン画像 AI自動生成 (${modelToUse})】`);
-    const rawMain = await callGeminiImageApi(GEMINI_API_KEY, selectedModel, mainPrompt, sourceImg, abortControllerRef, isCancelledRef, (msg) => setApiErrorMessage(msg), false, modelToUse);
+    const rawMain = await callGeminiImageApi(selectedModel, mainPrompt, sourceImg, abortControllerRef, isCancelledRef, (msg) => setApiErrorMessage(msg), false, modelToUse);
     let finalMain = sourceImg;
     if (rawMain && rawMain !== PLACEHOLDER_IMG) {
       finalMain = await processMainImage(rawMain, modelToUse);
@@ -781,7 +779,7 @@ ${mainPromptText ? `\n## 追加指示\n- ${mainPromptText}` : ''}`;
 ${tabPromptText ? `\n## 追加指示\n- ${tabPromptText}` : ''}`;
 
     console.log(`【Step4進入時 トークルームタブ画像 AI自動生成 (${modelToUse})】`);
-    const rawTab = await callGeminiImageApi(GEMINI_API_KEY, selectedModel, tabPrompt, finalMain, abortControllerRef, isCancelledRef, (msg) => setApiErrorMessage(msg), false, modelToUse);
+    const rawTab = await callGeminiImageApi(selectedModel, tabPrompt, finalMain, abortControllerRef, isCancelledRef, (msg) => setApiErrorMessage(msg), false, modelToUse);
     if (rawTab && rawTab !== PLACEHOLDER_IMG) {
       const finalTab = await processTabImage(rawTab, modelToUse);
       setTabImage(finalTab);
@@ -916,7 +914,6 @@ ${stampFreeText ? `\n## 追加指示\n- ${stampFreeText}` : ''}`;
       console.log(`【一括作成 [${i + 1}/${promptsToGenerate.length}] (${modelForBatch}) プロンプト: ${pLabel}】:\n`, promptToUse + NEGATIVE_PROMPT);
 
       const resultImg = await callGeminiImageApiWithRetry(
-        GEMINI_API_KEY,
         selectedModel,
         promptToUse,
         inputCanvasData,
@@ -1110,7 +1107,7 @@ ${mainPromptText ? `\n## 追加指示\n- ${mainPromptText}` : ''}`;
 
     console.log(`【メイン画像生成プロンプト (${mainModel})】:\n`, prompt + NEGATIVE_PROMPT);
 
-    const raw = await callGeminiImageApi(GEMINI_API_KEY, selectedModel, prompt, source, abortControllerRef, isCancelledRef, (msg) => setApiErrorMessage(msg), false, mainModel);
+    const raw = await callGeminiImageApi(selectedModel, prompt, source, abortControllerRef, isCancelledRef, (msg) => setApiErrorMessage(msg), false, mainModel);
     if (raw && raw !== PLACEHOLDER_IMG) {
       const processed = await processMainImage(raw);
       setMainImage(processed);
@@ -1147,7 +1144,7 @@ ${tabPromptText ? `\n## 追加指示\n- ${tabPromptText}` : ''}`;
 
     console.log(`【トークルームタブ画像生成プロンプト (${tabModel})】:\n`, prompt + NEGATIVE_PROMPT);
 
-    const raw = await callGeminiImageApi(GEMINI_API_KEY, selectedModel, prompt, source, abortControllerRef, isCancelledRef, (msg) => setApiErrorMessage(msg), false, tabModel);
+    const raw = await callGeminiImageApi(selectedModel, prompt, source, abortControllerRef, isCancelledRef, (msg) => setApiErrorMessage(msg), false, tabModel);
     if (raw && raw !== PLACEHOLDER_IMG) {
       const processed = await processTabImage(raw);
       setTabImage(processed);

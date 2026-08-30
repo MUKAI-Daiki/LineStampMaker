@@ -20,66 +20,50 @@ export function useStamina(userId: string | undefined, isAdmin: boolean) {
     isLoading: true,
   });
 
+  // 残量の初期化と時間回復はサーバー側(init_stamina)で算出する。
+  // クライアントは残量を書き込めない（テーブルへの書き込み権限なし）。
   const initAndRecover = useCallback(async () => {
-    if (!userId || isAdmin) {
+    if (!userId) {
       setState({ stamina: MAX_STAMINA, maxStamina: MAX_STAMINA, isLoading: false });
       return;
     }
 
-    const now = new Date();
+    const { data, error } = await supabase.rpc('init_stamina');
 
-    const { data: existing } = await supabase
-      .from('user_stamina')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (!existing) {
-      await supabase.from('user_stamina').insert({
-        user_id: userId,
-        stamina: MAX_STAMINA,
-        last_login_at: now.toISOString(),
-      });
-      setState({ stamina: MAX_STAMINA, maxStamina: MAX_STAMINA, isLoading: false });
+    if (error || !data || (Array.isArray(data) && data.length === 0)) {
+      setState({ stamina: 0, maxStamina: MAX_STAMINA, isLoading: false });
       return;
     }
 
-    const lastLogin = new Date(existing.last_login_at);
-    const diffMs = now.getTime() - lastLogin.getTime();
-    const hoursElapsed = Math.floor(diffMs / (1000 * 60 * 60));
-    const recovery = Math.min(hoursElapsed, MAX_STAMINA - existing.stamina);
-    const newStamina = Math.min(existing.stamina + Math.max(recovery, 0), MAX_STAMINA);
-
-    await supabase
-      .from('user_stamina')
-      .update({ stamina: newStamina, last_login_at: now.toISOString() })
-      .eq('user_id', userId);
-
-    setState({ stamina: newStamina, maxStamina: MAX_STAMINA, isLoading: false });
-  }, [userId, isAdmin]);
+    const row = Array.isArray(data) ? data[0] : data;
+    setState({
+      stamina: row.is_admin ? MAX_STAMINA : (row.stamina ?? 0),
+      maxStamina: row.max_stamina ?? MAX_STAMINA,
+      isLoading: false,
+    });
+  }, [userId]);
 
   useEffect(() => {
     initAndRecover();
   }, [initAndRecover]);
 
+  // 消費はサーバー側(consume_stamina)で原子的に行う。
+  // 不足している場合は -1 が返る。
   const consumeStamina = useCallback(async (model: string): Promise<boolean> => {
-    if (isAdmin) return true;
     if (!userId) return false;
 
-    const cost = STAMINA_COST[model] ?? 1;
-    if (state.stamina < cost) return false;
+    const { data, error } = await supabase.rpc('consume_stamina', { p_model: model });
 
-    const newStamina = state.stamina - cost;
-    const { error } = await supabase
-      .from('user_stamina')
-      .update({ stamina: newStamina })
-      .eq('user_id', userId);
+    if (error || typeof data !== 'number' || data < 0) {
+      if (typeof data === 'number' && data < 0) {
+        setState(prev => ({ ...prev, stamina: 0 }));
+      }
+      return false;
+    }
 
-    if (error) return false;
-
-    setState(prev => ({ ...prev, stamina: newStamina }));
+    setState(prev => ({ ...prev, stamina: data }));
     return true;
-  }, [userId, isAdmin, state.stamina]);
+  }, [userId]);
 
   const canAfford = useCallback((model: string): boolean => {
     if (isAdmin) return true;

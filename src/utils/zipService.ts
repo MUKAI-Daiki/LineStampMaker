@@ -1,12 +1,22 @@
 import JSZip from 'jszip';
 import QRCode from 'qrcode';
 
-// 英数ランダム8文字を生成
+// 英数ランダム8文字を生成（暗号論的に安全な乱数を使用）
 export function generateRandomCode(length: number = 8): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const randomValues = new Uint32Array(length);
+  crypto.getRandomValues(randomValues);
+  // 剰余バイアスを避けるため、文字数の倍数を超える値は切り捨てて再抽選する
+  const limit = Math.floor(4294967296 / chars.length) * chars.length;
   let result = '';
   for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+    let v = randomValues[i];
+    while (v >= limit) {
+      const retry = new Uint32Array(1);
+      crypto.getRandomValues(retry);
+      v = retry[0];
+    }
+    result += chars.charAt(v % chars.length);
   }
   return result;
 }

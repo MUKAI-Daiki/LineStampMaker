@@ -1,0 +1,3 @@
+[functions.gemini-image]
+verify_jwt = true
+entrypoint = "./functions/gemini-image/index.ts"

@@ -112,6 +112,3 @@ export default function OnboardingPage({ onStart }: OnboardingPageProps) {
     </div>
   );
 }
-
-
-export default OnboardingPage
