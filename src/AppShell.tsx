@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from './utils/useAuth';
+import { isLocalDev } from './utils/isLocalDev';
 import LoginPage from './pages/LoginPage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import OnboardingPage from './pages/OnboardingPage';
@@ -8,8 +9,9 @@ import App from './App';
 export default function AppShell() {
   const { session, user, isLoading, isAllowedDomain, isAdmin } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(true);
+  const local = isLocalDev();
 
-  if (isLoading) {
+  if (!local && isLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center font-biz-ud">
         <div className="flex flex-col items-center gap-4 animate-pulse">
@@ -24,11 +26,11 @@ export default function AppShell() {
     );
   }
 
-  if (!session) {
+  if (!local && !session) {
     return <LoginPage />;
   }
 
-  if (isAllowedDomain === false) {
+  if (!local && isAllowedDomain === false) {
     return <UnauthorizedPage />;
   }
 
@@ -36,5 +38,5 @@ export default function AppShell() {
     return <OnboardingPage onStart={() => setShowOnboarding(false)} />;
   }
 
-  return <App userId={user?.id} isAdmin={isAdmin} />;
+  return <App userId={local ? 'local-dev' : user?.id} isAdmin={local ? true : isAdmin} />;
 }

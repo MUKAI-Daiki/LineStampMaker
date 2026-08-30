@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { isLocalDev } from './isLocalDev';
 import type { PromptKeyword } from '../promptKeywords';
 
 export interface ProjectRow {
@@ -39,7 +40,29 @@ export interface FullProject {
   tabImage: string | null;
 }
 
+const LOCAL_STUB_PROJECT: ProjectRow = {
+  id: 'local-project',
+  name: 'ローカルプロジェクト',
+  step: 1,
+  selected_style: 'copic',
+  line_retention: 70,
+  char_desc: '',
+  base_free_text: '',
+  stamp_free_text: '',
+  custom_char_text: '',
+  selected_prompts: [],
+  main_prompt_text: '',
+  tab_prompt_text: '',
+  is_debug_mode: false,
+  selected_model: 'gemini-3.1-flash-image',
+  mode: 'default',
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+};
+
 export async function listProjects(): Promise<ProjectRow[]> {
+  if (isLocalDev()) return [LOCAL_STUB_PROJECT];
+
   const { data, error } = await supabase
     .from('projects')
     .select('*')
@@ -49,6 +72,8 @@ export async function listProjects(): Promise<ProjectRow[]> {
 }
 
 export async function createProject(name?: string): Promise<ProjectRow> {
+  if (isLocalDev()) return { ...LOCAL_STUB_PROJECT, name: name || LOCAL_STUB_PROJECT.name };
+
   const projectName = name || `プロジェクト ${new Date().toLocaleDateString('ja-JP')}`;
   const { data, error } = await supabase
     .from('projects')
@@ -63,6 +88,8 @@ export async function updateProject(
   id: string,
   updates: Partial<Omit<ProjectRow, 'id' | 'created_at' | 'updated_at'>>
 ): Promise<void> {
+  if (isLocalDev()) return;
+
   const { error } = await supabase
     .from('projects')
     .update(updates)
@@ -71,6 +98,8 @@ export async function updateProject(
 }
 
 export async function deleteProject(id: string): Promise<void> {
+  if (isLocalDev()) return;
+
   const { error } = await supabase
     .from('projects')
     .delete()
@@ -79,6 +108,10 @@ export async function deleteProject(id: string): Promise<void> {
 }
 
 export async function loadProject(id: string): Promise<FullProject> {
+  if (isLocalDev()) {
+    return { project: LOCAL_STUB_PROJECT, lineArt: null, baseImage: null, stamps: [], mainImage: null, tabImage: null };
+  }
+
   const { data: project, error: projError } = await supabase
     .from('projects')
     .select('*')
@@ -161,6 +194,8 @@ export async function saveProjectImages(
     stamps?: string[];
   }
 ): Promise<void> {
+  if (isLocalDev()) return;
+
   if (images.lineArt !== undefined) {
     await upsertSingleImage(projectId, 'line_art', images.lineArt);
   }

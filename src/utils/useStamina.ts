@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabaseClient';
+import { isLocalDev } from './isLocalDev';
 
 const MAX_STAMINA = 50;
 const STAMINA_COST: Record<string, number> = {
@@ -14,15 +15,20 @@ export interface StaminaState {
 }
 
 export function useStamina(userId: string | undefined, isAdmin: boolean) {
+  const local = isLocalDev();
+
   const [state, setState] = useState<StaminaState>({
     stamina: MAX_STAMINA,
     maxStamina: MAX_STAMINA,
-    isLoading: true,
+    isLoading: !local,
   });
 
-  // 残量の初期化と時間回復はサーバー側(init_stamina)で算出する。
-  // クライアントは残量を書き込めない（テーブルへの書き込み権限なし）。
   const initAndRecover = useCallback(async () => {
+    if (local) {
+      setState({ stamina: MAX_STAMINA, maxStamina: MAX_STAMINA, isLoading: false });
+      return;
+    }
+
     if (!userId) {
       setState({ stamina: MAX_STAMINA, maxStamina: MAX_STAMINA, isLoading: false });
       return;
@@ -41,15 +47,14 @@ export function useStamina(userId: string | undefined, isAdmin: boolean) {
       maxStamina: row.max_stamina ?? MAX_STAMINA,
       isLoading: false,
     });
-  }, [userId]);
+  }, [userId, local]);
 
   useEffect(() => {
     initAndRecover();
   }, [initAndRecover]);
 
-  // 消費はサーバー側(consume_stamina)で原子的に行う。
-  // 不足している場合は -1 が返る。
   const consumeStamina = useCallback(async (model: string): Promise<boolean> => {
+    if (local) return true;
     if (!userId) return false;
 
     const { data, error } = await supabase.rpc('consume_stamina', { p_model: model });
@@ -63,13 +68,13 @@ export function useStamina(userId: string | undefined, isAdmin: boolean) {
 
     setState(prev => ({ ...prev, stamina: data }));
     return true;
-  }, [userId]);
+  }, [userId, local]);
 
   const canAfford = useCallback((model: string): boolean => {
-    if (isAdmin) return true;
+    if (local || isAdmin) return true;
     const cost = STAMINA_COST[model] ?? 1;
     return state.stamina >= cost;
-  }, [isAdmin, state.stamina]);
+  }, [local, isAdmin, state.stamina]);
 
   const getStaminaCost = useCallback((model: string): number => {
     return STAMINA_COST[model] ?? 1;
@@ -80,6 +85,6 @@ export function useStamina(userId: string | undefined, isAdmin: boolean) {
     consumeStamina,
     canAfford,
     getStaminaCost,
-    isAdmin,
+    isAdmin: local || isAdmin,
   };
 }

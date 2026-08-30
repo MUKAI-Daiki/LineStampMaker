@@ -1,5 +1,6 @@
 import { ensureBase64PngData, processStampImage } from './stampProcessing';
 import { supabase } from './supabaseClient';
+import { isLocalDev } from './isLocalDev';
 
 const PLACEHOLDER_IMG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==";
 
@@ -23,20 +24,24 @@ export async function callGeminiImageApi(
   isLineArt: boolean = false,
   overrideModel?: string
 ): Promise<string> {
-  const { data: { session } } = await supabase.auth.getSession();
-  const accessToken = session?.access_token;
-  if (!accessToken) {
-    const msg = "ログインの有効期限が切れました。再度ログインしてください。";
-    console.warn(msg);
-    if (onError) onError(msg);
-    return PLACEHOLDER_IMG;
+  const local = isLocalDev();
+  let accessToken: string | undefined;
+
+  if (!local) {
+    const { data: { session } } = await supabase.auth.getSession();
+    accessToken = session?.access_token;
+    if (!accessToken) {
+      const msg = "ログインの有効期限が切れました。再度ログインしてください。";
+      console.warn(msg);
+      if (onError) onError(msg);
+      return PLACEHOLDER_IMG;
+    }
   }
 
   const cleanBase64 = await ensureBase64PngData(inputImageBase64, isLineArt);
   const fullPrompt = prompt + NEGATIVE_PROMPT;
 
   const modelName = overrideModel || selectedModel;
-  // API キーはサーバー側（Edge Function のシークレット）にのみ保持する
   const apiEndpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gemini-image`;
 
   const requestPayload = {
@@ -50,6 +55,13 @@ export async function callGeminiImageApi(
   console.log("📄 送信プロンプト:\n", fullPrompt);
   console.groupEnd();
 
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`;
+  }
+
   const controller = new AbortController();
   abortControllerRef.current = controller;
   const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -59,10 +71,7 @@ export async function callGeminiImageApi(
       apiEndpoint,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
+        headers,
         signal: controller.signal,
         body: JSON.stringify(requestPayload),
       }
@@ -76,7 +85,9 @@ export async function callGeminiImageApi(
       if (response.status === 429) {
         errorMsg = "API利用上限（レート制限）に達しました。しばらく時間をおいて再試行してください。";
       } else if (response.status === 401 || response.status === 403) {
-        errorMsg = "この機能を利用する権限がありません。大学（nua.ac.jp）のアカウントでログインしてください。";
+        errorMsg = local
+          ? "ローカル環境では画像生成機能は利用できません（認証が必要です）。"
+          : "この機能を利用する権限がありません。大学（nua.ac.jp）のアカウントでログインしてください。";
       } else if (response.status === 503) {
         errorMsg = "サーバー側の画像生成キーが未設定です。管理者に連絡してください。";
       } else if (response.status >= 500) {

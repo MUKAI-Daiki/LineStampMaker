@@ -8,8 +8,11 @@ import { processMainImage, processTabImage } from './utils/stampProcessing';
 import { CHECKER_BG, PLACEHOLDER_IMG } from './utils/constants';
 import { listProjects, createProject, updateProject, deleteProject, loadProject, saveProjectImages, type ProjectRow } from './utils/projectDb';
 import { signOut } from './utils/useAuth';
+import { isLocalDev } from './utils/isLocalDev';
 import { useStamina } from './utils/useStamina';
 import { Zap } from 'lucide-react';
+
+const LOCAL = isLocalDev();
 
 interface StyleItem {
   id: string;
@@ -1384,13 +1387,15 @@ ${tabPromptText ? `\n## 追加指示\n- ${tabPromptText}` : ''}`;
             <option value="default">通常モード</option>
             <option value="expert">エキスパートモード</option>
           </select>
-          <button
-            onClick={() => signOut()}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-bold border border-gray-200 transition-colors"
-            title="ログアウト"
-          >
-            <LogOut size={14} /> ログアウト
-          </button>
+          {!LOCAL && (
+            <button
+              onClick={() => signOut()}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-bold border border-gray-200 transition-colors"
+              title="ログアウト"
+            >
+              <LogOut size={14} /> ログアウト
+            </button>
+          )}
           {!isStaminaLoading && (
             <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border ${
               isAdmin
