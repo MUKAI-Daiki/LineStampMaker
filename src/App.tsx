@@ -25,9 +25,9 @@ const STYLES: StyleItem[] = [
   { id: 'anime', label: 'アニメ', easyLabel: 'アニメ', src: '/samples/anime.jpg', prompt: 'くっきりとしたアニメセル画風のカラーイラスト' },
   { id: 'watercolor', label: '水彩', easyLabel: 'すいさい', src: '/samples/watercolor.jpg', prompt: '優しく淡い色滲みがある水彩画風のタッチ、境界線は消す' },
   { id: 'clay', label: 'クレイ', easyLabel: '粘土(ねんど)', src: '/samples/clay.jpg', prompt: '3Dのプラスチックフィギュア風（背景の影は無し）' },
-  { id: 'retro', label: 'レトロ', easyLabel: 'レトロ', src: '/retro.webp', prompt: '80年代昭和レトロなポップアート風（ハーフトーン・ドット柄）' },
-  { id: 'coloredPencil', label: '色鉛筆', easyLabel: 'いろえんぴつ', src: '/colored_pencil.webp', prompt: '素朴な鉛筆の描き込みとハッチング質感の色鉛筆風' },
-  { id: '3dFigure', label: '3Dフィギュア', easyLabel: '3Dフィギュア', src: '/3d_figure.webp', prompt: 'プラスチック玩具のような3Dフィギュア風（本体のみ立体光沢、背景の影はなし）', hideInEasy: true },
+  { id: 'retro', label: 'レトロ', easyLabel: 'レトロ', src: '/samples/retro.jpg', prompt: '80年代昭和レトロなポップアート風（ハーフトーン・ドット柄）' },
+  { id: 'coloredPencil', label: '色鉛筆', easyLabel: 'いろえんぴつ', src: '/samples/colored_pencil.jpg', prompt: '素朴な鉛筆の描き込みとハッチング質感の色鉛筆風' },
+  { id: '3dFigure', label: '3Dフィギュア', easyLabel: '3Dフィギュア', src: '/samples/clay%20copy.jpg', prompt: 'プラスチック玩具のような3Dフィギュア風（本体のみ立体光沢、背景の影はなし）', hideInEasy: true },
   { id: 'picasso', label: '芸術（ピカソ風）', easyLabel: 'ピカソ風', src: '/samples/picasso.jpg', prompt: 'ピカソのキュビスムのような前衛的・幾何学的な配色アート風', hideInEasy: true },
   { id: 'original', label: 'オリジナル', easyLabel: 'そのまま', src: '/samples/original.jpg', prompt: '着色はせず、元線画のタッチを活かしたまま線の補正・清書と背景の白色処理を行う（表情は変化させない）' },
 ];
