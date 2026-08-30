@@ -52,9 +52,6 @@ export default function OnboardingPage({ onStart }: OnboardingPageProps) {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex items-center justify-center p-4 font-biz-ud">
       <div className="w-full max-w-2xl">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-green-100 mb-4">
-            <img src="/favicon.svg" alt="" className="w-10 h-10" />
-          </div>
           <h1 className="text-2xl font-extrabold text-gray-800 mb-2">LINEスタンプの作り方</h1>
           <p className="text-gray-500 text-sm">5つのステップで、あなただけのオリジナルスタンプが完成します</p>
         </div>
