@@ -54,35 +54,35 @@ const steps = [
 
 export default function OnboardingPage({ onStart }: OnboardingPageProps) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-8 px-4 font-biz-ud">
-      <div className="w-full max-w-3xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-extrabold text-gray-800 mb-2">LINEスタンプの作り方</h1>
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-6 px-4 font-biz-ud">
+      <div className="w-full max-w-5xl mx-auto">
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-extrabold text-gray-800 mb-1">LINEスタンプの作り方</h1>
           <p className="text-gray-500 text-sm">5つのステップで、あなただけのオリジナルスタンプが完成します</p>
         </div>
 
-        <div className="space-y-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
           {steps.map((s, i) => {
             const Icon = s.icon;
             return (
               <div
                 key={s.number}
-                className={`rounded-xl border overflow-hidden ${s.color} transition-all duration-300`}
+                className={`rounded-xl border overflow-hidden ${s.color} transition-all duration-300 ${s.number === 5 ? 'md:col-span-2 md:max-w-[calc(50%-6px)] md:mx-auto' : ''}`}
                 style={{ animationDelay: `${i * 80}ms`, animation: 'fadeSlideIn 0.4s ease-out both' }}
               >
-                <div className="flex items-start gap-4 p-4">
-                  <div className={`flex-shrink-0 w-10 h-10 rounded-xl ${s.iconBg} flex items-center justify-center`}>
-                    <Icon size={20} />
+                <div className="flex items-start gap-3 p-3">
+                  <div className={`flex-shrink-0 w-9 h-9 rounded-lg ${s.iconBg} flex items-center justify-center`}>
+                    <Icon size={18} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-xs font-bold opacity-60">STEP {s.number}</span>
-                      <h3 className="font-extrabold text-base">{s.title}</h3>
+                      <span className="text-[11px] font-bold opacity-60">STEP {s.number}</span>
+                      <h3 className="font-extrabold text-sm">{s.title}</h3>
                     </div>
-                    <p className="text-xs leading-relaxed opacity-80">{s.description}</p>
+                    <p className="text-[11px] leading-relaxed opacity-80">{s.description}</p>
                   </div>
                 </div>
-                <div className="px-4 pb-4">
+                <div className="px-3 pb-3">
                   <img
                     src={s.image}
                     alt={`Step ${s.number} の画面イメージ`}
@@ -95,15 +95,17 @@ export default function OnboardingPage({ onStart }: OnboardingPageProps) {
           })}
         </div>
 
-        <div className="text-center pb-8">
+        <div className="text-center pb-4">
           <button
             onClick={onStart}
-            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-green-600 hover:bg-green-700 active:scale-[0.98] text-white font-extrabold text-base shadow-lg shadow-green-200 transition-all duration-200"
+            className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-green-600 hover:bg-green-700 active:scale-[0.98] text-white font-extrabold text-base shadow-lg shadow-green-200 transition-all duration-200"
           >
             はじめる <ArrowRight size={20} />
           </button>
-          <p className="mt-3 text-xs text-gray-400">いつでもやり直しや修正ができます</p>
+          <p className="mt-2 text-xs text-gray-400">いつでもやり直しや修正ができます</p>
         </div>
+
+        <p className="text-center text-[11px] text-gray-400 pb-4">イラスト原案: 向井友香</p>
       </div>
 
       <style>{`
@@ -121,3 +123,6 @@ export default function OnboardingPage({ onStart }: OnboardingPageProps) {
     </div>
   );
 }
+
+
+export default OnboardingPage
