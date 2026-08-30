@@ -12,6 +12,7 @@ const steps = [
     description: 'キャンバスにキャラクターの線画を描きます。カメラで手描きイラストを取り込むこともできます。',
     color: 'bg-blue-50 border-blue-200 text-blue-600',
     iconBg: 'bg-blue-100',
+    image: '/images/onboarding/Step1.jpeg',
   },
   {
     number: 2,
@@ -20,6 +21,7 @@ const steps = [
     description: '好きな画風（コピック・アニメ・水彩など）を選んで、AIが線画をカラーイラストに仕上げます。',
     color: 'bg-emerald-50 border-emerald-200 text-emerald-600',
     iconBg: 'bg-emerald-100',
+    image: '/images/onboarding/Step2.jpeg',
   },
   {
     number: 3,
@@ -28,6 +30,7 @@ const steps = [
     description: 'ポーズや感情、文字を選んで、8〜40個のスタンプバリエーションを作ります。',
     color: 'bg-amber-50 border-amber-200 text-amber-600',
     iconBg: 'bg-amber-100',
+    image: '/images/onboarding/Step3.jpeg',
   },
   {
     number: 4,
@@ -36,6 +39,7 @@ const steps = [
     description: 'LINEスタンプの販売ページ用のメイン画像とトークルームのタブ画像を自動生成します。',
     color: 'bg-rose-50 border-rose-200 text-rose-600',
     iconBg: 'bg-rose-100',
+    image: '/images/onboarding/Finish.jpeg',
   },
   {
     number: 5,
@@ -44,43 +48,54 @@ const steps = [
     description: '完成したスタンプ一覧をPDFで確認したり、ZIPファイルでまとめてダウンロードできます。',
     color: 'bg-violet-50 border-violet-200 text-violet-600',
     iconBg: 'bg-violet-100',
+    image: '/images/onboarding/Finish.jpeg',
   },
 ];
 
 export default function OnboardingPage({ onStart }: OnboardingPageProps) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex items-center justify-center p-4 font-biz-ud">
-      <div className="w-full max-w-2xl">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-8 px-4 font-biz-ud">
+      <div className="w-full max-w-3xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-extrabold text-gray-800 mb-2">LINEスタンプの作り方</h1>
           <p className="text-gray-500 text-sm">5つのステップで、あなただけのオリジナルスタンプが完成します</p>
         </div>
 
-        <div className="space-y-3 mb-8">
+        <div className="space-y-4 mb-8">
           {steps.map((s, i) => {
             const Icon = s.icon;
             return (
               <div
                 key={s.number}
-                className={`flex items-start gap-4 p-4 rounded-xl border ${s.color} transition-all duration-300`}
+                className={`rounded-xl border overflow-hidden ${s.color} transition-all duration-300`}
                 style={{ animationDelay: `${i * 80}ms`, animation: 'fadeSlideIn 0.4s ease-out both' }}
               >
-                <div className={`flex-shrink-0 w-10 h-10 rounded-xl ${s.iconBg} flex items-center justify-center`}>
-                  <Icon size={20} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-xs font-bold opacity-60">STEP {s.number}</span>
-                    <h3 className="font-extrabold text-base">{s.title}</h3>
+                <div className="flex items-start gap-4 p-4">
+                  <div className={`flex-shrink-0 w-10 h-10 rounded-xl ${s.iconBg} flex items-center justify-center`}>
+                    <Icon size={20} />
                   </div>
-                  <p className="text-xs leading-relaxed opacity-80">{s.description}</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-xs font-bold opacity-60">STEP {s.number}</span>
+                      <h3 className="font-extrabold text-base">{s.title}</h3>
+                    </div>
+                    <p className="text-xs leading-relaxed opacity-80">{s.description}</p>
+                  </div>
+                </div>
+                <div className="px-4 pb-4">
+                  <img
+                    src={s.image}
+                    alt={`Step ${s.number} の画面イメージ`}
+                    className="w-full rounded-lg border border-black/5 shadow-sm"
+                    loading={i > 1 ? 'lazy' : undefined}
+                  />
                 </div>
               </div>
             );
           })}
         </div>
 
-        <div className="text-center">
+        <div className="text-center pb-8">
           <button
             onClick={onStart}
             className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-green-600 hover:bg-green-700 active:scale-[0.98] text-white font-extrabold text-base shadow-lg shadow-green-200 transition-all duration-200"
