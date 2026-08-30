@@ -27,7 +27,7 @@ const STYLES: StyleItem[] = [
   { id: 'clay', label: 'クレイ', easyLabel: '粘土(ねんど)', src: '/samples/clay.jpg', prompt: '3Dのプラスチックフィギュア風（背景の影は無し）' },
   { id: 'retro', label: 'レトロ', easyLabel: 'レトロ', src: '/samples/retro.jpg', prompt: '80年代昭和レトロなポップアート風（ハーフトーン・ドット柄）' },
   { id: 'coloredPencil', label: '色鉛筆', easyLabel: 'いろえんぴつ', src: '/samples/colored_pencil.jpg', prompt: '素朴な鉛筆の描き込みとハッチング質感の色鉛筆風' },
-  { id: '3dFigure', label: '3Dフィギュア', easyLabel: '3Dフィギュア', src: '/samples/clay%20copy.jpg', prompt: 'プラスチック玩具のような3Dフィギュア風（本体のみ立体光沢、背景の影はなし）', hideInEasy: true },
+  { id: '3dFigure', label: '3Dフィギュア', easyLabel: '3Dフィギュア', src: '/samples/clay_figure.jpg', prompt: 'プラスチック玩具のような3Dフィギュア風（本体のみ立体光沢、背景の影はなし）', hideInEasy: true },
   { id: 'picasso', label: '芸術（ピカソ風）', easyLabel: 'ピカソ風', src: '/samples/picasso.jpg', prompt: 'ピカソのキュビスムのような前衛的・幾何学的な配色アート風', hideInEasy: true },
   { id: 'original', label: 'オリジナル', easyLabel: 'そのまま', src: '/samples/original.jpg', prompt: '着色はせず、元線画のタッチを活かしたまま線の補正・清書と背景の白色処理を行う（表情は変化させない）' },
 ];
@@ -1581,7 +1581,7 @@ ${tabPromptText ? `\n## 追加指示\n- ${tabPromptText}` : ''}`;
         )}
 
         {step === 2 && (
-          <div className="flex flex-col items-center gap-6 animate-in slide-in-from-right duration-300">
+          <div className="flex flex-col items-center gap-4 animate-in slide-in-from-right duration-300">
             <h2 className="text-lg font-semibold">{mode === 'easy' ? 'どんなえにする？' : '基本イラストの画風と指示を設定'}</h2>
 
             {isGeneratingBase ? (
@@ -1602,146 +1602,152 @@ ${tabPromptText ? `\n## 追加指示\n- ${tabPromptText}` : ''}`;
                 <p className="text-xs text-gray-400 mt-2">※生成に数秒〜数十秒かかります</p>
               </div>
             ) : (
-              <div className="w-full max-w-3xl bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-gray-100">
-                <div className="mb-8">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-bold text-gray-700 text-base sm:text-lg">画風スタイルを選択</h3>
-                    {mode === 'easy' && (
-                      <span className="text-xs font-semibold bg-orange-100 text-orange-600 px-3 py-1 rounded-full">
-                        かんたんモード
-                      </span>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-5">
-                    {availableStyles.map(s => {
-                      const isSelected = selectedStyle === s.id;
-                      return (
-                        <div
-                          key={s.id}
-                          onClick={() => setSelectedStyle(s.id)}
-                          className={`group cursor-pointer border-4 rounded-2xl overflow-hidden transition-all duration-200 bg-white relative ${isSelected ? 'border-green-500 shadow-xl scale-[1.03] ring-2 ring-green-400/50' : 'border-gray-200 opacity-80 hover:opacity-100 hover:border-gray-300 hover:shadow-md'}`}
-                        >
-                          {isSelected && (
-                            <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1 shadow z-10">
-                              <Check size={18} />
+              <div className="w-full max-w-6xl bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100">
+                <div className="flex flex-col md:flex-row gap-5">
+                  {/* 左: 画風選択 (幅広) */}
+                  <div className="md:w-[58%] shrink-0">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="font-bold text-gray-700 text-base sm:text-lg">画風スタイルを選択</h3>
+                      {mode === 'easy' && (
+                        <span className="text-xs font-semibold bg-orange-100 text-orange-600 px-3 py-1 rounded-full">
+                          かんたんモード
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {availableStyles.map(s => {
+                        const isSelected = selectedStyle === s.id;
+                        return (
+                          <div
+                            key={s.id}
+                            onClick={() => setSelectedStyle(s.id)}
+                            className={`group cursor-pointer border-4 rounded-2xl overflow-hidden transition-all duration-200 bg-white relative ${isSelected ? 'border-green-500 shadow-xl scale-[1.03] ring-2 ring-green-400/50' : 'border-gray-200 opacity-80 hover:opacity-100 hover:border-gray-300 hover:shadow-md'}`}
+                          >
+                            {isSelected && (
+                              <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1 shadow z-10">
+                                <Check size={18} />
+                              </div>
+                            )}
+                            <div className="aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden">
+                              <img
+                                src={s.src}
+                                alt={s.label}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                onError={(e) => { e.currentTarget.src = PLACEHOLDER_IMG; }}
+                              />
                             </div>
-                          )}
-                          <div className="aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden">
-                            <img
-                              src={s.src}
-                              alt={s.label}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                              onError={(e) => { e.currentTarget.src = PLACEHOLDER_IMG; }}
-                            />
+                            <div className={`text-center font-bold py-2 text-sm sm:text-base transition-colors ${isSelected ? 'bg-green-500 text-white' : 'bg-white text-gray-800'}`}>
+                              {mode === 'easy' ? (s.easyLabel || s.label) : s.label}
+                            </div>
                           </div>
-                          <div className={`text-center font-bold py-3 text-base sm:text-lg transition-colors ${isSelected ? 'bg-green-500 text-white' : 'bg-white text-gray-800'}`}>
-                            {mode === 'easy' ? (s.easyLabel || s.label) : s.label}
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
 
-                {mode !== 'easy' && (
-                  <div className="mb-6">
-                    <h3 className="font-bold mb-2 text-gray-700 flex items-center gap-2">
-                      線画の維持率
-                      <span className="text-xs bg-green-100 text-green-700 font-bold px-2.5 py-0.5 rounded-full">
-                        {lineRetention}%
-                      </span>
-                    </h3>
+                  {/* 右: 調整項目 */}
+                  <div className="md:w-[42%] flex flex-col gap-4">
+                    {mode !== 'easy' && (
+                      <div>
+                        <h3 className="font-bold mb-2 text-gray-700 flex items-center gap-2">
+                          線画の維持率
+                          <span className="text-xs bg-green-100 text-green-700 font-bold px-2.5 py-0.5 rounded-full">
+                            {lineRetention}%
+                          </span>
+                        </h3>
 
-                    {mode === 'default' ? (
-                      <div className="flex gap-6 items-center bg-gray-50 p-3.5 rounded-xl border border-gray-200">
-                        {[40, 70, 90].map((val) => (
-                          <label key={val} className="flex items-center gap-2 cursor-pointer font-medium text-sm text-gray-700 hover:text-green-600 transition-colors">
+                        {mode === 'default' ? (
+                          <div className="flex gap-4 items-center bg-gray-50 p-3 rounded-xl border border-gray-200">
+                            {[40, 70, 90].map((val) => (
+                              <label key={val} className="flex items-center gap-2 cursor-pointer font-medium text-sm text-gray-700 hover:text-green-600 transition-colors">
+                                <input
+                                  type="radio"
+                                  name="lineRetention"
+                                  value={val}
+                                  checked={lineRetention === val}
+                                  onChange={() => setLineRetention(val)}
+                                  className="accent-green-500 w-4 h-4 cursor-pointer"
+                                />
+                                <span>{val}% {val === 70 && <span className="text-xs text-gray-400 font-normal">(デフォルト)</span>}</span>
+                              </label>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
+                            <div className="flex justify-between items-center mb-2 text-xs font-semibold text-gray-500">
+                              <span>アレンジ (1%)</span>
+                              <span className="text-green-600 font-bold text-base">{lineRetention}%</span>
+                              <span>再現 (100%)</span>
+                            </div>
                             <input
-                              type="radio"
-                              name="lineRetention"
-                              value={val}
-                              checked={lineRetention === val}
-                              onChange={() => setLineRetention(val)}
-                              className="accent-green-500 w-4 h-4 cursor-pointer"
+                              type="range"
+                              min="1"
+                              max="100"
+                              value={lineRetention}
+                              onChange={(e) => setLineRetention(Number(e.target.value))}
+                              className="w-full accent-green-500 cursor-pointer"
                             />
-                            <span>{val}% {val === 70 && <span className="text-xs text-gray-400 font-normal">(デフォルト)</span>}</span>
-                          </label>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                        <div className="flex justify-between items-center mb-2 text-xs font-semibold text-gray-500">
-                          <span>アレンジ重視 (1%)</span>
-                          <span className="text-green-600 font-bold text-base">{lineRetention}%</span>
-                          <span>元線画の再現重視 (100%)</span>
-                        </div>
-                        <input
-                          type="range"
-                          min="1"
-                          max="100"
-                          value={lineRetention}
-                          onChange={(e) => setLineRetention(Number(e.target.value))}
-                          className="w-full accent-green-500 cursor-pointer"
-                        />
+                          </div>
+                        )}
+                        <p className="text-xs text-gray-400 mt-1">
+                          ※小さいほどAIが自由に着色、大きいほど線画をそのまま残します。
+                        </p>
                       </div>
                     )}
-                    <p className="text-xs text-gray-400 mt-1.5">
-                      ※数字が小さいほどAIが線画を自由に着色・アレンジし、大きいほど描いた線画をそのまま残します。
-                    </p>
-                  </div>
-                )}
 
-                <div className="mb-6">
-                  <h3 className="font-bold mb-2 text-gray-700 flex items-center gap-2">
-                    {mode === 'easy' ? 'キャラのせつめい' : 'キャラクターの説明'}
-                    <span className="text-xs bg-gray-100 text-gray-500 font-normal px-2 py-0.5 rounded">{mode === 'easy' ? '自由(じゆう)' : '任意入力'}</span>
-                  </h3>
-                  <input
-                    type="text"
-                    value={charDesc}
-                    onChange={(e) => setCharDesc(e.target.value)}
-                    placeholder={mode === 'easy' ? 'れい: くろいねこ、あかいぼうし' : '例: グレーの色の猫、赤いマントが右にチラみえしている。おなかは薄灰色'}
-                    className="w-full border-2 border-gray-300 rounded-xl p-3 focus:border-green-500 outline-none text-sm"
-                  />
-                  <p className="text-xs text-gray-400 mt-1">{mode === 'easy' ? '※いろやとくちょうを書くとキレイになるよ' : '※キャラクターの色、服、特徴などを記述すると生成精度が格段にアップします'}</p>
-                </div>
+                    <div>
+                      <h3 className="font-bold mb-1.5 text-gray-700 flex items-center gap-2">
+                        {mode === 'easy' ? 'キャラのせつめい' : 'キャラクターの説明'}
+                        <span className="text-xs bg-gray-100 text-gray-500 font-normal px-2 py-0.5 rounded">{mode === 'easy' ? '自由(じゆう)' : '任意入力'}</span>
+                      </h3>
+                      <input
+                        type="text"
+                        value={charDesc}
+                        onChange={(e) => setCharDesc(e.target.value)}
+                        placeholder={mode === 'easy' ? 'れい: くろいねこ、あかいぼうし' : '例: グレーの色の猫、赤いマントが右にチラみえしている。おなかは薄灰色'}
+                        className="w-full border-2 border-gray-300 rounded-xl p-2.5 focus:border-green-500 outline-none text-sm"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">{mode === 'easy' ? '※いろやとくちょうを書くとキレイになるよ' : '※色、服、特徴などを記述すると生成精度がアップします'}</p>
+                    </div>
 
-                <div className="mb-6">
-                  <h3 className="font-bold mb-2 text-gray-700 flex items-center gap-2">
-                    {mode === 'easy' ? 'じゆうに書く（つけくわえる）' : '自由記述プロンプト（アレンジ指示）'}
-                    <span className="text-xs bg-gray-100 text-gray-500 font-normal px-2 py-0.5 rounded">{mode === 'easy' ? '自由(じゆう)' : '任意入力'}</span>
-                  </h3>
-                  <textarea
-                    value={baseFreeText}
-                    onChange={(e) => setBaseFreeText(e.target.value)}
-                    placeholder={mode === 'easy' ? 'れい: かわいいぼうしをかぶっている' : '例: かわいい帽子をかぶっている'}
-                    className="w-full border-2 border-gray-300 rounded-xl p-3 focus:border-green-500 outline-none text-sm"
-                    rows={2}
-                  />
-                </div>
+                    <div>
+                      <h3 className="font-bold mb-1.5 text-gray-700 flex items-center gap-2">
+                        {mode === 'easy' ? 'じゆうに書く（つけくわえる）' : '自由記述プロンプト（アレンジ指示）'}
+                        <span className="text-xs bg-gray-100 text-gray-500 font-normal px-2 py-0.5 rounded">{mode === 'easy' ? '自由(じゆう)' : '任意入力'}</span>
+                      </h3>
+                      <textarea
+                        value={baseFreeText}
+                        onChange={(e) => setBaseFreeText(e.target.value)}
+                        placeholder={mode === 'easy' ? 'れい: かわいいぼうしをかぶっている' : '例: かわいい帽子をかぶっている'}
+                        className="w-full border-2 border-gray-300 rounded-xl p-2.5 focus:border-green-500 outline-none text-sm"
+                        rows={2}
+                      />
+                    </div>
 
-                <div className="flex justify-between items-center gap-4 pt-2">
-                  <button
-                    onClick={() => setStep(1)}
-                    className="px-5 py-2.5 rounded-full font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors text-sm"
-                  >
-                    {mode === 'easy' ? '← えをかきなおす' : '← 線画描きに戻る'}
-                  </button>
-                  <div className="flex gap-2">
-                    {baseImage && (
+                    <div className="flex justify-between items-center gap-3 pt-1 mt-auto">
                       <button
-                        onClick={() => setStep(3)}
-                        className="px-5 py-2.5 rounded-full font-bold text-gray-700 bg-gray-200 hover:bg-gray-300 transition-colors text-sm flex items-center gap-1.5"
+                        onClick={() => setStep(1)}
+                        className="px-4 py-2.5 rounded-full font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors text-sm"
                       >
-                        {mode === 'easy' ? 'つぎへ' : '次のステップへ'} <ArrowRight size={16} />
+                        {mode === 'easy' ? '← えをかきなおす' : '← 線画描きに戻る'}
                       </button>
-                    )}
-                    <button
-                      onClick={generateBaseImage}
-                      className={`px-8 py-3 rounded-full font-bold text-white shadow-lg transition-transform active:scale-95 flex items-center gap-2 ${mode === 'easy' ? 'bg-orange-500 text-2xl' : 'bg-green-500 hover:bg-green-600'}`}
-                    >
-                      {mode === 'easy' ? 'つくる！' : '基本イラストを生成'} <ImageIcon size={24} />
-                    </button>
+                      <div className="flex gap-2">
+                        {baseImage && (
+                          <button
+                            onClick={() => setStep(3)}
+                            className="px-4 py-2.5 rounded-full font-bold text-gray-700 bg-gray-200 hover:bg-gray-300 transition-colors text-sm flex items-center gap-1.5"
+                          >
+                            {mode === 'easy' ? 'つぎへ' : '次のステップへ'} <ArrowRight size={16} />
+                          </button>
+                        )}
+                        <button
+                          onClick={generateBaseImage}
+                          className={`px-6 py-2.5 rounded-full font-bold text-white shadow-lg transition-transform active:scale-95 flex items-center gap-2 ${mode === 'easy' ? 'bg-orange-500 text-xl' : 'bg-green-500 hover:bg-green-600'}`}
+                        >
+                          {mode === 'easy' ? 'つくる！' : '基本イラストを生成'} <ImageIcon size={20} />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
