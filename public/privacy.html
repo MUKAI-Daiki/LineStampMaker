@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png" />
+  <title>プライバシーポリシー — 手描きでスタンプメーカー</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=BIZ+UDGothic:wght@400;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'BIZ UDGothic', 'BIZ UDPGothic', sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      line-height: 1.8;
+      font-size: 15px;
+    }
+
+    .container {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #16a34a;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 32px;
+      transition: color 0.15s;
+    }
+    .back-link:hover { color: #15803d; }
+    .back-link svg { width: 16px; height: 16px; }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      color: #64748b;
+      font-size: 14px;
+      margin-bottom: 40px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 40px 0 16px;
+      padding-left: 14px;
+      border-left: 4px solid #16a34a;
+    }
+
+    h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #334155;
+      margin: 24px 0 10px;
+    }
+
+    p { margin-bottom: 14px; }
+
+    ul, ol {
+      margin: 0 0 14px 24px;
+    }
+    li { margin-bottom: 6px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0 20px;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 10px 14px;
+      border: 1px solid #e2e8f0;
+      text-align: left;
+    }
+    th {
+      background: #f1f5f9;
+      font-weight: 700;
+      color: #334155;
+      white-space: nowrap;
+    }
+
+    .highlight-box {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin: 20px 0;
+    }
+    .highlight-box.warn {
+      background: #fffbeb;
+      border-color: #fde68a;
+    }
+    .highlight-box p:last-child { margin-bottom: 0; }
+
+    .badge {
+      display: inline-block;
+      background: #16a34a;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 999px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+
+    .footer {
+      margin-top: 60px;
+      padding-top: 24px;
+      border-top: 1px solid #e2e8f0;
+      color: #94a3b8;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    strong { color: #0f172a; }
+
+    @media (max-width: 640px) {
+      .container { padding: 32px 16px 60px; }
+      h1 { font-size: 22px; }
+      h2 { font-size: 17px; }
+      table { font-size: 13px; }
+      th, td { padding: 8px 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="/" class="back-link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      アプリに戻る
+    </a>
+
+    <h1>プライバシーポリシー</h1>
+    <p class="subtitle">アプリケーション名: 手描きでスタンプメーカー ／ 最終更新日: 2026年8月29日</p>
+
+    <!-- 1. サービス概要 -->
+    <h2>1. サービス概要</h2>
+    <p>
+      「手描きでスタンプメーカー」（以下「本サービス」）は、手描きの線画から AI（Google Gemini API）を活用して LINE スタンプ画像を自動生成する Web アプリケーションです。
+    </p>
+    <p>
+      本サービスは<strong>名古屋芸術大学（nua.ac.jp ドメイン）に所属するユーザー</strong>を対象としています。
+    </p>
+
+    <!-- 2. 収集する情報 -->
+    <h2>2. 収集する情報</h2>
+
+    <h3>2.1 Google アカウント情報（OAuth 認証を通じて取得）</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>情報の種類</th>
+          <th>OAuth スコープ</th>
+          <th>取得の目的</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>メールアドレス</td>
+          <td>email</td>
+          <td>ユーザーの識別、nua.ac.jp ドメインの所属確認</td>
+        </tr>
+        <tr>
+          <td>表示名</td>
+          <td>profile（openid）</td>
+          <td>アプリ内でのユーザー名表示</td>
+        </tr>
+        <tr>
+          <td>プロフィール画像 URL</td>
+          <td>profile（openid）</td>
+          <td>アプリ内でのアバター表示（任意）</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>上記以外の Google アカウント情報（連絡先、カレンダー、Google ドライブ等）には<strong>一切アクセスしません</strong>。</p>
+
+    <h3>2.2 ユーザーが作成するデータ</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>データの種類</th>
+          <th>説明</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>線画データ</td>
+          <td>ユーザーが描画またはアップロードした画像</td>
+        </tr>
+        <tr>
+          <td>AI 生成画像</td>
+          <td>AI が生成したスタンプ・メイン画像・タブ画像</td>
+        </tr>
+        <tr>
+          <td>プロジェクト設定</td>
+          <td>スタイル選択、プロンプトテキスト、ステップ状態等</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>2.3 自動的に収集される情報</h3>
+    <ul>
+      <li>ログイン日時（最終アクセス日の記録のため）</li>
+      <li>認証セッション情報（Supabase Auth による自動管理）</li>
+    </ul>
+    <p>行動トラッキング、アクセス解析、広告用の情報収集は<strong>一切行いません</strong>。</p>
+
+    <!-- 3. データの利用目的 -->
+    <h2>3. データの利用目的</h2>
+
+    <div class="highlight-box">
+      <p>本サービスが収集するデータは、以下の目的<strong>のみ</strong>に使用します。</p>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>利用目的</th>
+          <th>対象データ</th>
+          <th>詳細</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>利用可能ユーザーの識別</strong></td>
+          <td>メールアドレス</td>
+          <td>本サービスは <strong>nua.ac.jp ドメイン</strong>のメールアドレスを持つユーザーのみが利用できます。ログイン時にメールアドレスのドメインを確認し、利用資格を判定します。</td>
+        </tr>
+        <tr>
+          <td><strong>生成画像とユーザーの紐づけ</strong></td>
+          <td>ユーザー ID、プロジェクト・画像データ</td>
+          <td>ユーザーが作成した線画・AI 生成画像をデータベース上でユーザーアカウントと紐づけ、プロジェクトの保存・復元を可能にします。</td>
+        </tr>
+        <tr>
+          <td><strong>AI 画像生成</strong></td>
+          <td>線画データ、プロンプトテキスト</td>
+          <td>Google Gemini API に線画とプロンプトを送信し、スタンプ画像を生成します。送信データは画像生成処理のみに使用されます。</td>
+        </tr>
+        <tr>
+          <td><strong>ユーザー体験の向上</strong></td>
+          <td>表示名、プロフィール画像</td>
+          <td>アプリ内にユーザー名とアバターを表示し、パーソナライズされた体験を提供します。</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>収集した個人情報を、広告、マーケティング、プロファイリング、第三者への販売・貸与・共有の目的で使用することは<strong>ありません</strong>。</p>
+
+    <!-- 4. データの保管と削除 -->
+    <h2>4. データの保管と削除</h2>
+
+    <h3>4.1 保管場所</h3>
+    <p>すべてのユーザーデータは <strong>Supabase</strong>（クラウドデータベースサービス）上に保管されます。通信は全経路で TLS 1.2 以上により暗号化されています。</p>
+
+    <h3>4.2 データの自動削除</h3>
+
+    <div class="highlight-box warn">
+      <p><strong>重要: 30日間の自動削除ルール</strong></p>
+      <p>
+        最終アクセス日から <strong>30日間</strong> ログインがない場合、そのユーザーに関連する<strong>すべてのデータ</strong>が自動的に削除されます。
+      </p>
+      <ul style="margin-top: 10px;">
+        <li>プロジェクトデータ（線画・生成画像・設定）</li>
+        <li>ログイン履歴・認証セッション情報</li>
+        <li>アカウント情報</li>
+      </ul>
+      <p style="margin-top: 10px;">削除されたデータを復元することはできません。継続利用される場合は、30日以内に一度ログインしてください。</p>
+    </div>
+
+    <h3>4.3 ユーザーによる手動削除</h3>
+    <ul>
+      <li>アプリ内の操作で、個別のプロジェクトや画像をいつでも削除できます。</li>
+      <li>アカウント全体の即時削除を希望される場合は、下記の連絡窓口までご連絡ください。</li>
+    </ul>
+
+    <!-- 5. データの第三者提供 -->
+    <h2>5. データの第三者提供</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>提供先</th>
+          <th>提供するデータ</th>
+          <th>目的</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Google（Gemini API）</td>
+          <td>線画データ、プロンプトテキスト</td>
+          <td>AI による画像生成処理（生成のみ。Google 側の利用規約に準拠）</td>
+        </tr>
+        <tr>
+          <td>Google（OAuth 認証）</td>
+          <td>認証トークン</td>
+          <td>ログイン認証の検証</td>
+        </tr>
+        <tr>
+          <td>Supabase</td>
+          <td>全ユーザーデータ</td>
+          <td>データベースホスティング（データ処理委託先）</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>上記以外の第三者にユーザーデータを提供することはありません。法令に基づく開示請求があった場合を除きます。</p>
+
+    <!-- 6. Cookie とローカルストレージ -->
+    <h2>6. Cookie とローカルストレージ</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>種類</th>
+          <th>用途</th>
+          <th>トラッキング</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>認証 Cookie / localStorage</td>
+          <td>Supabase Auth によるセッション管理</td>
+          <td>なし</td>
+        </tr>
+        <tr>
+          <td>localStorage（current_project_id）</td>
+          <td>最後に開いていたプロジェクトの記憶</td>
+          <td>なし</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>広告・トラッキング目的の Cookie は<strong>使用しません</strong>。</p>
+
+    <!-- 7. セキュリティ対策 -->
+    <h2>7. セキュリティ対策</h2>
+    <ul>
+      <li>データベースのアクセスは <strong>Row Level Security（RLS）</strong> により、認証済みユーザー自身のデータのみに制限されます。</li>
+      <li>すべての通信は <strong>HTTPS（TLS 1.2 以上）</strong>で暗号化されます。</li>
+      <li>Google OAuth 2.0 の <strong>PKCE フロー</strong>を採用し、認証コードの傍受を防止します。</li>
+      <li>API キーやシークレットはサーバー側の環境変数で管理し、クライアントコードに露出しません。</li>
+    </ul>
+
+    <!-- 8. ユーザーの権利 -->
+    <h2>8. ユーザーの権利</h2>
+    <p>ユーザーは以下の権利を有します。</p>
+    <ul>
+      <li><strong>アクセス権:</strong> ご自身のデータがどのように保管されているかを確認する権利</li>
+      <li><strong>削除権:</strong> ご自身のデータの削除を要求する権利</li>
+      <li><strong>異議申立権:</strong> データの取扱いについて異議を申し立てる権利</li>
+      <li><strong>同意撤回権:</strong> Google アカウントの連携をいつでも解除する権利（Google アカウント設定の「サードパーティのアプリとサービス」から解除可能）</li>
+    </ul>
+
+    <!-- 9. 対象ユーザーの範囲 -->
+    <h2>9. 対象ユーザーの範囲</h2>
+    <div class="highlight-box">
+      <p>本サービスは、<strong>名古屋芸術大学（nua.ac.jp）ドメインの Google アカウント</strong>を保有するユーザーのみが利用できます。</p>
+      <p>nua.ac.jp 以外のメールアドレスでログインを試みた場合、サービスへのアクセスは拒否されます。</p>
+    </div>
+
+    <!-- 10. ポリシーの変更 -->
+    <h2>10. ポリシーの変更</h2>
+    <p>本ポリシーは、サービスの変更や法令の改正に応じて更新される場合があります。重要な変更があった場合は、アプリ内で通知します。</p>
+
+    <!-- 11. お問い合わせ -->
+    <h2>11. お問い合わせ</h2>
+    <p>本ポリシーまたはデータの取扱いに関するご質問・ご要望は、以下までご連絡ください。</p>
+    <table>
+      <tbody>
+        <tr>
+          <th>管理者</th>
+          <td>名古屋芸術大学教育学部 ICT教育モデル教室 向井大喜</td>
+        </tr>
+        <tr>
+          <th>メールアドレス</th>
+          <td>d-mukai@nua.ac.jp</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="footer">
+      <p>&copy; 2026 手描きでスタンプメーカー — RiTan Lab.</p>
+      <p>本ポリシーの最終更新日: 2026年8月29日</p>
+    </div>
+  </div>
+</body>
+</html>

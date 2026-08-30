@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png" />
+  <title>利用規約 — 手描きでスタンプメーカー</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=BIZ+UDGothic:wght@400;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'BIZ UDGothic', 'BIZ UDPGothic', sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      line-height: 1.8;
+      font-size: 15px;
+    }
+
+    .container {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #16a34a;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 32px;
+      transition: color 0.15s;
+    }
+    .back-link:hover { color: #15803d; }
+    .back-link svg { width: 16px; height: 16px; }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      color: #64748b;
+      font-size: 14px;
+      margin-bottom: 40px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 40px 0 16px;
+      padding-left: 14px;
+      border-left: 4px solid #16a34a;
+    }
+
+    h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #334155;
+      margin: 24px 0 10px;
+    }
+
+    p { margin-bottom: 14px; }
+
+    ul, ol {
+      margin: 0 0 14px 24px;
+    }
+    ol { list-style-type: decimal; }
+    li { margin-bottom: 6px; }
+
+    .highlight-box {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin: 20px 0;
+    }
+    .highlight-box.warn {
+      background: #fffbeb;
+      border-color: #fde68a;
+    }
+    .highlight-box.blue {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+    }
+    .highlight-box p:last-child { margin-bottom: 0; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0 20px;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 10px 14px;
+      border: 1px solid #e2e8f0;
+      text-align: left;
+    }
+    th {
+      background: #f1f5f9;
+      font-weight: 700;
+      color: #334155;
+      white-space: nowrap;
+    }
+
+    strong { color: #0f172a; }
+
+    .footer {
+      margin-top: 60px;
+      padding-top: 24px;
+      border-top: 1px solid #e2e8f0;
+      color: #94a3b8;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .footer a {
+      color: #64748b;
+      text-decoration: underline;
+    }
+
+    @media (max-width: 640px) {
+      .container { padding: 32px 16px 60px; }
+      h1 { font-size: 22px; }
+      h2 { font-size: 17px; }
+      table { font-size: 13px; }
+      th, td { padding: 8px 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="/" class="back-link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      アプリに戻る
+    </a>
+
+    <h1>利用規約</h1>
+    <p class="subtitle">アプリケーション名: 手描きでスタンプメーカー ／ 最終更新日: 2026年8月29日</p>
+
+    <!-- 1. 総則 -->
+    <h2>第1条（総則）</h2>
+    <p>本利用規約（以下「本規約」）は、「手描きでスタンプメーカー」（以下「本サービス」）の利用条件を定めるものです。本サービスを利用するすべてのユーザー（以下「利用者」）は、本規約に同意したものとみなされます。</p>
+
+    <!-- 2. サービス内容 -->
+    <h2>第2条（サービス内容）</h2>
+    <p>本サービスは、利用者が描画した線画をもとに、生成 AI 技術を活用して LINE スタンプ用画像を制作するための Web アプリケーションです。</p>
+    <ul>
+      <li>利用者が手描きまたはアップロードした線画に対し、AI による着色・加工を行います</li>
+      <li>生成された画像は、利用者自身がダウンロードして利用できます</li>
+      <li>画像生成には Google Gemini API を使用しています</li>
+    </ul>
+
+    <!-- 3. 利用資格 -->
+    <h2>第3条（利用資格）</h2>
+    <p>本サービスは、<strong>名古屋芸術大学（nua.ac.jp）ドメインの Google アカウント</strong>を保有するユーザーのみが利用できます。</p>
+    <p>nua.ac.jp 以外のメールアドレスでのログインはできません。</p>
+
+    <!-- 4. 著作権 -->
+    <h2>第4条（著作権）</h2>
+
+    <h3>4.1 利用者が作成したスタンプの著作権</h3>
+
+    <div class="highlight-box">
+      <p>本サービスを利用して作成されたスタンプ画像の<strong>著作権は、作成者（利用者）に帰属</strong>します。</p>
+    </div>
+
+    <p>利用者は、自身が作成したスタンプ画像を自由に使用、複製、配布、販売することができます。</p>
+
+    <h3>4.2 公開時の推奨表記</h3>
+
+    <div class="highlight-box warn">
+      <p><strong>推奨事項:</strong> 作成したスタンプを公開・販売・頒布する場合は、以下の趣旨を明記することが望ましいとされます。</p>
+      <p style="margin-top: 12px; padding: 12px 16px; background: #fff; border-radius: 8px; border: 1px solid #e5e7eb; font-size: 14px;">
+        「本画像は、原画に対して生成 AI（<strong>Nanobanana 2</strong>）による着色・調整を行い制作したものです。」
+      </p>
+      <p style="margin-top: 10px;">この表記は義務ではなく推奨事項ですが、AI 生成物の透明性確保の観点から記載を推奨します。</p>
+    </div>
+
+    <h3>4.3 本システム内の画像の著作権</h3>
+
+    <div class="highlight-box blue">
+      <p>本サービスのインターフェース内で使用されている画像（サンプル画像、アイコン、説明用イラスト等）の<strong>著作権は、キャラクター原案作成者である向井友香に帰属</strong>します。</p>
+      <p style="margin-top: 10px;">これらの画像を、本サービス外で無断で使用、複製、転載、二次利用することを禁止します。</p>
+    </div>
+
+    <!-- 5. 禁止事項 -->
+    <h2>第5条（禁止事項）</h2>
+    <p>利用者は、本サービスの利用にあたり、以下の行為を行ってはなりません。</p>
+    <ol>
+      <li>法令または公序良俗に違反する画像の作成</li>
+      <li>他者の権利（著作権、肖像権、商標権等）を侵害する画像の作成</li>
+      <li>本サービスのシステムに対する不正アクセス、改ざん、妨害行為</li>
+      <li>大量の自動リクエストを送信するなど、サービスの運営を妨げる行為</li>
+      <li>本サービス内の画像（第4条3項に定めるもの）の無断転載・二次利用</li>
+      <li>他の利用者になりすます行為</li>
+      <li>その他、運営者が不適切と判断する行為</li>
+    </ol>
+
+    <!-- 6. AI 生成物に関する注意事項 -->
+    <h2>第6条（AI 生成物に関する注意事項）</h2>
+    <ul>
+      <li>AI による画像生成は、毎回同一の結果を保証するものではありません</li>
+      <li>生成された画像が意図しない表現を含む可能性があります。公開前に利用者自身で内容を確認してください</li>
+      <li>AI 生成物に関する法的な取扱いは、今後の法令・ガイドラインの整備に伴い変更される可能性があります</li>
+      <li>LINE スタンプとして販売する場合は、LINE Creators Market の審査ガイドラインに従ってください</li>
+    </ul>
+
+    <!-- 7. データの取扱い -->
+    <h2>第7条（データの取扱い）</h2>
+    <p>利用者のデータの取扱いについては、<a href="/privacy.html" style="color: #16a34a; font-weight: 700;">プライバシーポリシー</a>に定めるとおりとします。</p>
+    <p>特に以下の点にご留意ください。</p>
+    <ul>
+      <li>最終アクセスから <strong>30日間</strong>ログインがない場合、すべてのデータ（プロジェクト・画像・ログイン履歴）が自動的に削除されます</li>
+      <li>削除されたデータの復元はできません</li>
+    </ul>
+
+    <!-- 8. 免責事項 -->
+    <h2>第8条（免責事項）</h2>
+    <ol>
+      <li>運営者は、本サービスの内容、品質、正確性、安全性、適法性、最新性について一切保証しません</li>
+      <li>運営者は、本サービスの利用により生じた損害（生成画像の品質、データの消失、サービスの中断等を含む）について、一切の責任を負いません</li>
+      <li>利用者が本サービスを利用して作成した画像を第三者に販売・頒布した結果生じたトラブルについて、運営者は関与・仲裁を行いません</li>
+      <li>本サービスは予告なく機能の変更、一時停止、または終了する場合があります</li>
+    </ol>
+
+    <!-- 9. 規約の変更 -->
+    <h2>第9条（規約の変更）</h2>
+    <p>運営者は、必要と判断した場合に本規約を変更できるものとします。変更後の利用規約は、本ページに掲載した時点で効力を生じます。重要な変更がある場合は、アプリ内で通知します。</p>
+
+    <!-- 10. 準拠法・管轄 -->
+    <h2>第10条（準拠法・管轄）</h2>
+    <p>本規約の解釈は日本法に準拠するものとします。本サービスに関する紛争については、名古屋地方裁判所を第一審の専属的合意管轄裁判所とします。</p>
+
+    <!-- 11. お問い合わせ -->
+    <h2>第11条（お問い合わせ）</h2>
+    <p>本規約に関するご質問は、以下までご連絡ください。</p>
+    <table>
+      <tbody>
+        <tr>
+          <th>管理者</th>
+          <td>名古屋芸術大学教育学部 ICT教育モデル教室 向井大喜</td>
+        </tr>
+        <tr>
+          <th>メールアドレス</th>
+          <td>d-mukai@nua.ac.jp</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="footer">
+      <p>&copy; 2026 手描きでスタンプメーカー — RiTan Lab.</p>
+      <p>制定日: 2026年8月29日</p>
+      <p style="margin-top: 8px;"><a href="/privacy.html">プライバシーポリシー</a></p>
+    </div>
+  </div>
+</body>
+</html>
