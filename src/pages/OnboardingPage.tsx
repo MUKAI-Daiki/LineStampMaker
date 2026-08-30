@@ -17,14 +17,14 @@ const steps = [
     title: '基本イラスト生成',
     description: '画風を選ぶと、AIが線画をカラーイラストに仕上げます。',
     color: 'bg-emerald-50 border-emerald-200 text-emerald-700',
-    image: '/images/onboarding/Step2.jpeg',
+    image: '/images/onboarding/Step3.jpeg',
   },
   {
     number: 3,
     title: 'スタンプ作成',
     description: 'ポーズや感情、文字を選んで、8個のスタンプを作ります。',
     color: 'bg-amber-50 border-amber-200 text-amber-700',
-    image: '/images/onboarding/Step3.jpeg',
+    image: '/images/onboarding/Step2.jpeg',
   },
   {
     number: 4,
@@ -90,14 +90,22 @@ export default function OnboardingPage({ onStart }: OnboardingPageProps) {
           ))}
         </div>
 
-        <div className="text-center mt-auto pt-2 pb-2">
-          <button
-            onClick={onStart}
-            className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-green-600 hover:bg-green-700 active:scale-[0.98] text-white font-extrabold text-base shadow-lg shadow-green-200 transition-all duration-200"
-          >
-            はじめる <ArrowRight size={20} />
-          </button>
-          <p className="mt-1.5 text-[11px] text-gray-400">いつでもやり直しや修正ができます</p>
+        <div className="mt-auto pt-3 pb-2 flex flex-col md:flex-row items-center gap-3">
+          <img
+            src="/images/onboarding/Finish.jpeg"
+            alt="完成イメージ"
+            className="w-full md:flex-1 max-h-[320px] object-contain rounded-xl border border-gray-200 shadow-sm"
+            loading="lazy"
+          />
+          <div className="flex flex-col items-center gap-2 shrink-0 md:pr-4">
+            <button
+              onClick={onStart}
+              className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-green-600 hover:bg-green-700 active:scale-[0.98] text-white font-extrabold text-base shadow-lg shadow-green-200 transition-all duration-200"
+            >
+              はじめる <ArrowRight size={20} />
+            </button>
+            <p className="text-[11px] text-gray-400">いつでもやり直しや修正ができます</p>
+          </div>
         </div>
 
         <p className="text-center text-[10px] text-gray-400 pb-2">イラスト原案: 向井友香</p>
