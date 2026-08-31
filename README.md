@@ -113,6 +113,9 @@ npm run build
 ---
 
 ## クレジット
-- **主催**: 名古屋芸術大学 教育学部子ども学科
-- **研究室**: 向井研究室 (RiTan Lab)
-- **技術協力**: Google Gemini API (Gemini NanoBanana 2)
+- **開発**: RiTan Lab.
+- **責任者**: 向井大喜
+- **説明イラストキャラクター原案**: 向井友香
+- **画像生成**: Google Gemini API (Gemini NanoBanana 2)
+- **開発環境**: Bolt.new, Google Antigravity IDE
+- **配布場所**: https://www.ritan-lab.jp
