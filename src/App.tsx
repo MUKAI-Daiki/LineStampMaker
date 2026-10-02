@@ -1,8 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Camera, Pen, Eraser, Undo, ArrowRight, Image as ImageIcon, Download, Printer, Check, Shuffle, Trash2, X, Square, Hand, FolderOpen, Plus, LogOut, Crop, RotateCcw } from 'lucide-react';
 import { promptKeywords, type Mode, type PromptKeyword } from './promptKeywords';
-import { generatePdfBlobUrl, generatePdfBytes } from './utils/pdfGenerator';
-import { prepareStampZipAndGenerateQr } from './utils/zipService';
 import { callGeminiImageApi, callGeminiImageApiWithRetry, NEGATIVE_PROMPT } from './utils/geminiApi';
 import { processMainImage, processTabImage } from './utils/stampProcessing';
 import { CHECKER_BG, PLACEHOLDER_IMG } from './utils/constants';
@@ -876,23 +874,29 @@ ${tabPromptText ? `\n## 追加指示\n- ${tabPromptText}` : ''}`;
     setIsGeneratingTab(false);
   };
 
+  const buildPdfAndZip = async () => {
+    const [{ generatePdfBlobUrl, generatePdfBytes }, { prepareStampZipAndGenerateQr }] = await Promise.all([
+      import('./utils/pdfGenerator'),
+      import('./utils/zipService'),
+    ]);
+    const pdfMainImage = baseImage || mainImage;
+    const { qrDataUrl } = await prepareStampZipAndGenerateQr(
+      mainImage,
+      tabImage,
+      savedStamps,
+      (qrUrl) => generatePdfBytes(pdfMainImage, capturedLineArt, savedStamps, qrUrl)
+    );
+    const url = await generatePdfBlobUrl(pdfMainImage, capturedLineArt, savedStamps, qrDataUrl);
+    setPdfBlobUrl(url);
+  };
+
   // Step 5 進入時または画像更新時に Zip準備(sample.pdf同梱) + QR発行を行った上で PDF を描画生成
   useEffect(() => {
     if (step === 5) {
       setIsGeneratingPdf(true);
       (async () => {
         try {
-          const pdfMainImage = baseImage || mainImage;
-          // 1. sample.pdf を Zip 内に含めて Cloudflare アップロード + QRコード発行
-          const { qrDataUrl } = await prepareStampZipAndGenerateQr(
-            mainImage,
-            tabImage,
-            savedStamps,
-            (qrUrl) => generatePdfBytes(pdfMainImage, capturedLineArt, savedStamps, qrUrl)
-          );
-          // 2. 印刷レイアウトPDF生成 (画面プレビュー用)
-          const url = await generatePdfBlobUrl(pdfMainImage, capturedLineArt, savedStamps, qrDataUrl);
-          setPdfBlobUrl(url);
+          await buildPdfAndZip();
         } catch (err) {
           console.error("PDF / Zip / QR generation error:", err);
         } finally {
@@ -905,15 +909,7 @@ ${tabPromptText ? `\n## 追加指示\n- ${tabPromptText}` : ''}`;
   const regeneratePdf = async () => {
     setIsGeneratingPdf(true);
     try {
-      const pdfMainImage = baseImage || mainImage;
-      const { qrDataUrl } = await prepareStampZipAndGenerateQr(
-        mainImage,
-        tabImage,
-        savedStamps,
-        (qrUrl) => generatePdfBytes(pdfMainImage, capturedLineArt, savedStamps, qrUrl)
-      );
-      const url = await generatePdfBlobUrl(pdfMainImage, capturedLineArt, savedStamps, qrDataUrl);
-      setPdfBlobUrl(url);
+      await buildPdfAndZip();
     } catch (err) {
       console.error("PDF generation error:", err);
     } finally {
