@@ -71,10 +71,10 @@ export function useStamina(userId: string | undefined, isAdmin: boolean) {
   }, [userId, local]);
 
   const canAfford = useCallback((model: string): boolean => {
-    if (local || isAdmin) return true;
+    if (isAdmin) return true;
     const cost = STAMINA_COST[model] ?? 1;
     return state.stamina >= cost;
-  }, [local, isAdmin, state.stamina]);
+  }, [isAdmin, state.stamina]);
 
   const getStaminaCost = useCallback((model: string): number => {
     return STAMINA_COST[model] ?? 1;
@@ -85,6 +85,6 @@ export function useStamina(userId: string | undefined, isAdmin: boolean) {
     consumeStamina,
     canAfford,
     getStaminaCost,
-    isAdmin: local || isAdmin,
+    isAdmin,
   };
 }

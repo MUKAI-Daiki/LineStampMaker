@@ -76,7 +76,7 @@ npm install
 VITE_GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
-> `VITE_SUPABASE_URL` と `VITE_SUPABASE_ANON_KEY` は本番用です。ローカル版では DB・認証を使わないため、未設定でも動作します。
+> `VITE_SUPABASE_URL` と `VITE_SUPABASE_ANON_KEY` はアプリ起動時に読み込まれるため、ローカル版でも削除しないでください（ローカル版では実際の DB・認証への通信は行いません）。
 
 ### 3. 開発サーバーの起動
 

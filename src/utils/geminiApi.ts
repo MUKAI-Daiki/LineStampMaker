@@ -1,8 +1,7 @@
 import { ensureBase64PngData, processStampImage } from './stampProcessing';
 import { supabase } from './supabaseClient';
 import { isLocalDev } from './isLocalDev';
-
-const PLACEHOLDER_IMG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==";
+import { PLACEHOLDER_IMG } from './constants';
 
 export const NEGATIVE_PROMPT = `
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from './supabaseClient';
+import { isLocalDev } from './isLocalDev';
 
 const ALLOWED_DOMAIN = 'nua.ac.jp';
 const ADMIN_EMAIL = 'd-mukai@nua.ac.jp';
@@ -23,6 +24,11 @@ export function useAuth() {
   });
 
   useEffect(() => {
+    if (isLocalDev()) {
+      setAuthState(prev => ({ ...prev, isLoading: false }));
+      return;
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       const user = session?.user ?? null;
       setAuthState({
