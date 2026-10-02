@@ -47,7 +47,7 @@ export default function App({ userId, isAdmin }: AppProps) {
   const [selectedModel, setSelectedModel] = useState<'gemini-3.1-flash-image' | 'gemini-3.1-flash-lite-image'>('gemini-3.1-flash-image');
 
   // スタミナ管理
-  const { stamina, maxStamina, isLoading: isStaminaLoading, consumeStamina, canAfford, getStaminaCost } = useStamina(userId, isAdmin);
+  const { stamina, maxStamina, isLoading: isStaminaLoading, consumeStamina, canAfford, getStaminaCost, syncStamina } = useStamina(userId, isAdmin);
   const [staminaError, setStaminaError] = useState<string | null>(null);
 
   const [isRestored, setIsRestored] = useState<boolean>(false);
@@ -91,6 +91,12 @@ export default function App({ userId, isAdmin }: AppProps) {
   const [tabPromptText, setTabPromptText] = useState<string>('');
   const [isGeneratingMain, setIsGeneratingMain] = useState<boolean>(false);
   const [isGeneratingTab, setIsGeneratingTab] = useState<boolean>(false);
+
+  // 生成が終わるたびにサーバー側の実残量（失敗時の返却を含む）へ表示を合わせる
+  const isAnyGenerating = isGeneratingBase || isGeneratingStamp || isGeneratingBulk || isGeneratingMain || isGeneratingTab;
+  useEffect(() => {
+    if (!isAnyGenerating) syncStamina();
+  }, [isAnyGenerating, syncStamina]);
 
   // PDF ビューア用ステート
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);

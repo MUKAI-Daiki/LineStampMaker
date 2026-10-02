@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 const ALLOWED_DOMAIN = "nua.ac.jp";
+const ADMIN_EMAIL = "d-mukai@nua.ac.jp";
 
 const ALLOWED_MODELS = new Set([
   "gemini-3.1-flash-image",
@@ -39,7 +40,8 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  if (!supabaseUrl || !anonKey) {
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !anonKey || !serviceKey) {
     return json({ error: "Server not configured" }, 500);
   }
 
@@ -89,32 +91,71 @@ Deno.serve(async (req) => {
     return json({ error: "Image generation is not configured on the server." }, 503);
   }
 
-  const upstream = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [
-              { inlineData: { mimeType: "image/png", data: imageBase64 } },
-              { text: prompt },
-            ],
-          },
-        ],
-        generationConfig: { seed: 42 },
-      }),
-    },
-  );
+  const admin = createClient(supabaseUrl, serviceKey);
+  const isAdmin = email === ADMIN_EMAIL;
+
+  if (!isAdmin) {
+    const { data: remaining, error: consumeError } = await admin.rpc("consume_stamina_for", {
+      p_user: user.id,
+      p_model: model,
+    });
+    if (consumeError || typeof remaining !== "number") {
+      console.error("stamina consume failed", consumeError);
+      return json({ error: "Server error" }, 500);
+    }
+    if (remaining < 0) {
+      return json({ error: "Insufficient stamina" }, 402);
+    }
+  }
+
+  const refund = async () => {
+    if (isAdmin) return;
+    const { error } = await admin.rpc("refund_stamina_for", { p_user: user.id, p_model: model });
+    if (error) console.error("stamina refund failed", error);
+  };
+
+  let upstream: Response;
+  try {
+    upstream = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [
+                { inlineData: { mimeType: "image/png", data: imageBase64 } },
+                { text: prompt },
+              ],
+            },
+          ],
+          generationConfig: { seed: 42 },
+        }),
+      },
+    );
+  } catch (err) {
+    console.error("Gemini fetch failed", err);
+    await refund();
+    return json({ error: "Upstream error" }, 502);
+  }
 
   if (!upstream.ok) {
     // 上流の詳細はクライアントへ返さない（内部情報の露出防止）
     console.error("Gemini upstream error", upstream.status, await upstream.text());
+    await refund();
     return json({ error: "Upstream error" }, upstream.status === 429 ? 429 : 502);
   }
 
-  const data = await upstream.json();
+  let data: { candidates?: { content?: { parts?: { inlineData?: { data?: string } }[] } }[] };
+  try {
+    data = await upstream.json();
+  } catch {
+    await refund();
+    return json({ error: "Upstream error" }, 502);
+  }
+  const hasImage = (data.candidates?.[0]?.content?.parts ?? []).some((p) => !!p?.inlineData?.data);
+  if (!hasImage) await refund();
   return json(data, 200);
 });

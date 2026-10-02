@@ -102,6 +102,8 @@ export async function callGeminiImageApi(
       let errorMsg = `画像生成エラー (${response.status})`;
       if (response.status === 429) {
         errorMsg = "API利用上限（レート制限）に達しました。しばらく時間をおいて再試行してください。";
+      } else if (!local && response.status === 402) {
+        errorMsg = "スタミナが足りません。時間をおくと回復します（1時間に1回復）";
       } else if (response.status === 401 || response.status === 403) {
         errorMsg = local
           ? "APIキーが無効です。.envファイルの VITE_GEMINI_API_KEY を確認してください。"
