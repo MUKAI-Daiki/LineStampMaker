@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Camera, Pen, Eraser, Undo, ArrowRight, Image as ImageIcon, Download, Printer, Check, Shuffle, Trash2, X, Square, Hand, FolderOpen, Plus, LogOut, Crop, RotateCcw } from 'lucide-react';
+import { Camera, Pen, Eraser, Undo, ArrowRight, Image as ImageIcon, Download, Printer, Check, Shuffle, Trash2, X, Square, Hand, FolderOpen, Plus, LogOut, Crop, RotateCcw, BookOpen } from 'lucide-react';
 import { promptKeywords, type Mode, type PromptKeyword } from './promptKeywords';
 import { callGeminiImageApi, callGeminiImageApiWithRetry, NEGATIVE_PROMPT } from './utils/geminiApi';
 import { processMainImage, processTabImage } from './utils/stampProcessing';
@@ -36,9 +36,10 @@ const STYLES: StyleItem[] = [
 interface AppProps {
   userId?: string;
   isAdmin: boolean;
+  onShowGuide?: () => void;
 }
 
-export default function App({ userId, isAdmin }: AppProps) {
+export default function App({ userId, isAdmin, onShowGuide }: AppProps) {
   const [step, setStep] = useState<number>(1);
   const [mode, setMode] = useState<Mode>('default');
 
@@ -1258,6 +1259,7 @@ ${tabPromptText ? `\n## 追加指示\n- ${tabPromptText}` : ''}`;
       setMainPromptText('');
       setTabPromptText('');
       setStep(1);
+      onShowGuide?.();
     }
   };
 
@@ -1435,7 +1437,16 @@ ${tabPromptText ? `\n## 追加指示\n- ${tabPromptText}` : ''}`;
         )}
         {step === 1 && (
           <div className="flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-300 w-full max-w-7xl mx-auto">
-            <div className="w-full text-center mb-1">
+            <div className="w-full text-center mb-1 relative">
+              {onShowGuide && (
+                <button
+                  onClick={onShowGuide}
+                  className={`mb-2 md:mb-0 md:absolute md:left-0 md:top-1/2 md:-translate-y-1/2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-600 hover:text-green-700 hover:border-green-300 hover:bg-green-50 active:scale-[0.98] font-bold shadow-sm transition-all ${mode === 'easy' ? 'text-sm' : 'text-xs'}`}
+                  title="つくり方の説明ページへ戻る"
+                >
+                  <BookOpen size={mode === 'easy' ? 16 : 14} /> {mode === 'easy' ? 'せつめいへもどる' : '説明へ戻る'}
+                </button>
+              )}
               <h2 className={`font-bold text-gray-800 ${mode === 'easy' ? 'text-2xl text-green-700' : 'text-xl'}`}>
                 {mode === 'easy' ? 'えをかいてね' : '線画描画・取り込み'}
               </h2>

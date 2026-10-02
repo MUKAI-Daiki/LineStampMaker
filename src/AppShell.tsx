@@ -26,6 +26,7 @@ function LoadingScreen() {
 function ShellContent() {
   const { session, user, isLoading, isAllowedDomain, isAdmin } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(true);
+  const [hasStarted, setHasStarted] = useState(false);
   const local = isLocalDev();
   const canEnter = local || (!!session && isAllowedDomain !== false);
 
@@ -36,9 +37,32 @@ function ShellContent() {
   if (!local && isLoading) return <LoadingScreen />;
   if (!local && !session) return <LoginPage />;
   if (!local && isAllowedDomain === false) return <UnauthorizedPage />;
-  if (showOnboarding) return <OnboardingPage onStart={() => setShowOnboarding(false)} />;
 
-  return <App userId={local ? 'local-dev' : user?.id} isAdmin={local ? true : isAdmin} />;
+  const startApp = () => {
+    setHasStarted(true);
+    setShowOnboarding(false);
+    window.scrollTo(0, 0);
+  };
+  const showGuide = () => {
+    setShowOnboarding(true);
+    window.scrollTo(0, 0);
+  };
+
+  // 一度開始したメイン画面は、説明ページ表示中も裏で保持して描きかけを失わない
+  return (
+    <>
+      {showOnboarding && <OnboardingPage onStart={startApp} />}
+      {hasStarted && (
+        <div className={showOnboarding ? 'hidden' : undefined}>
+          <App
+            userId={local ? 'local-dev' : user?.id}
+            isAdmin={local ? true : isAdmin}
+            onShowGuide={local ? showGuide : undefined}
+          />
+        </div>
+      )}
+    </>
+  );
 }
 
 export default function AppShell() {
