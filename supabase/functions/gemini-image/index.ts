@@ -56,8 +56,18 @@ Deno.serve(async (req) => {
   }
 
   const email = (user.email ?? "").toLowerCase();
-  if (!email.endsWith("@" + ALLOWED_DOMAIN)) {
+  const appMeta = (user.app_metadata ?? {}) as { provider?: string; providers?: string[] };
+  const isGoogleIdentity = appMeta.provider === "google" ||
+    (Array.isArray(appMeta.providers) && appMeta.providers.includes("google"));
+  const emailVerified = !!user.email_confirmed_at;
+  // 大学ドメインだけでは不十分。確認済みかつ Google 認証の本人であることを要求する
+  if (!email.endsWith("@" + ALLOWED_DOMAIN) || !emailVerified || !isGoogleIdentity) {
     return json({ error: "Forbidden" }, 403);
+  }
+
+  const declaredLength = Number(req.headers.get("Content-Length") ?? "");
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_BODY_BYTES) {
+    return json({ error: "Payload too large" }, 413);
   }
 
   const raw = await req.text();
@@ -155,7 +165,6 @@ Deno.serve(async (req) => {
     await refund();
     return json({ error: "Upstream error" }, 502);
   }
-  const hasImage = (data.candidates?.[0]?.content?.parts ?? []).some((p) => !!p?.inlineData?.data);
-  if (!hasImage) await refund();
+  // 上流が正常応答した時点で生成は実行済み。画像が無くても返金はしない（無限無料生成の防止）
   return json(data, 200);
 });

@@ -1,5 +1,7 @@
 import JSZip from 'jszip';
 import QRCode from 'qrcode';
+import { supabase } from './supabaseClient';
+import { isLocalDev } from './isLocalDev';
 
 // 英数ランダム8文字を生成（暗号論的に安全な乱数を使用）
 export function generateRandomCode(length: number = 8): string {
@@ -106,11 +108,18 @@ export async function prepareStampZipAndGenerateQr(
   const zipBlob = await zip.generateAsync({ type: 'blob' });
 
   try {
-    const uploadRes = await fetch(`${workerEndpoint}/upload?filename=${filename}`, {
+    // アップロード先が本人確認できるよう、ログイン中のセッション証明を添付する
+    const uploadHeaders: Record<string, string> = { 'Content-Type': 'application/zip' };
+    if (!isLocalDev()) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        uploadHeaders['Authorization'] = `Bearer ${session.access_token}`;
+      }
+    }
+
+    const uploadRes = await fetch(`${workerEndpoint}/upload?filename=${encodeURIComponent(filename)}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/zip',
-      },
+      headers: uploadHeaders,
       body: zipBlob,
     });
 
