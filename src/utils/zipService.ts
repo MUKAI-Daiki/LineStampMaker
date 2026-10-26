@@ -1,7 +1,5 @@
 import JSZip from 'jszip';
 import QRCode from 'qrcode';
-import { supabase } from './supabaseClient';
-import { isLocalDev } from './isLocalDev';
 
 // 英数ランダム8文字を生成（暗号論的に安全な乱数を使用）
 export function generateRandomCode(length: number = 8): string {
@@ -82,8 +80,8 @@ export async function prepareStampZipAndGenerateQr(
   const code8 = generateRandomCode(8);
   const filename = `${code8}.zip`;
 
-  // Cloudflare Worker API URL (.envから取得、フォールバックあり)
-  const workerEndpoint = import.meta.env.VITE_CLOUDFLARE_WORKER_URL || 'https://line-stamp-uploader.workers.dev';
+  // Cloudflare Worker API URL (.envで上書き可能)
+  const workerEndpoint = import.meta.env.VITE_CLOUDFLARE_WORKER_URL || 'https://stamp.ritan-lab.jp';
 
   // 100%Webページとしてブラウザ認識させるため末尾に.zipを付けないURL
   let downloadUrl = `${workerEndpoint}/p/${code8}`;
@@ -108,18 +106,10 @@ export async function prepareStampZipAndGenerateQr(
   const zipBlob = await zip.generateAsync({ type: 'blob' });
 
   try {
-    // アップロード先が本人確認できるよう、ログイン中のセッション証明を添付する
-    const uploadHeaders: Record<string, string> = { 'Content-Type': 'application/zip' };
-    if (!isLocalDev()) {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.access_token) {
-        uploadHeaders['Authorization'] = `Bearer ${session.access_token}`;
-      }
-    }
-
+    // Worker の CORS は Content-Type のみ許可。Authorization を付けるとプリフライトで遮断される
     const uploadRes = await fetch(`${workerEndpoint}/upload?filename=${encodeURIComponent(filename)}`, {
       method: 'POST',
-      headers: uploadHeaders,
+      headers: { 'Content-Type': 'application/zip' },
       body: zipBlob,
     });
 
