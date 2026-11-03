@@ -36,7 +36,7 @@ const LOCAL_STUB_PROJECT: ProjectRow = {
   line_retention: 70,
   char_desc: '',
   base_free_text: '',
-  selected_assets: ['rpg'],
+  selected_assets: ['rpg', 'slg', 'act', 'novel'],
   variation_free_text: '',
   is_debug_mode: false,
   selected_model: 'gemini-3.1-flash-image',

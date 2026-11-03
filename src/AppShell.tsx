@@ -25,9 +25,9 @@ function LoadingScreen() {
 
 function ShellContent() {
   const { session, user, isLoading, isAllowedDomain, isAdmin } = useAuth();
-  const [showOnboarding, setShowOnboarding] = useState(true);
-  const [hasStarted, setHasStarted] = useState(false);
   const local = isLocalDev();
+  const [showOnboarding, setShowOnboarding] = useState(!local);
+  const [hasStarted, setHasStarted] = useState(local);
   const canEnter = local || (!!session && isAllowedDomain !== false);
 
   useEffect(() => {
