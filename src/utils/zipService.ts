@@ -1,129 +1,57 @@
 import JSZip from 'jszip';
-import QRCode from 'qrcode';
+import { ASSET_DEFS, slotIndex } from '../characterAssets';
+import type { Variation } from './variationDb';
 
-// 英数ランダム8文字を生成（暗号論的に安全な乱数を使用）
-export function generateRandomCode(length: number = 8): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  const randomValues = new Uint32Array(length);
-  crypto.getRandomValues(randomValues);
-  // 剰余バイアスを避けるため、文字数の倍数を超える値は切り捨てて再抽選する
-  const limit = Math.floor(4294967296 / chars.length) * chars.length;
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    let v = randomValues[i];
-    while (v >= limit) {
-      const retry = new Uint32Array(1);
-      crypto.getRandomValues(retry);
-      v = retry[0];
-    }
-    result += chars.charAt(v % chars.length);
-  }
-  return result;
+const UNSAFE_CHARS = /[\\/:*?"<>|\s]+/g;
+
+export function safeFileName(name: string): string {
+  return name.replace(UNSAFE_CHARS, '_').replace(/^_+|_+$/g, '') || 'image';
 }
 
-import { applyAlphaTransparency } from './imageTransparency';
-
-// クロマキー背景(#FF00FF)をアルファチャンネル(0~255)でスムーズに透過処理
-export async function makeBackgroundTransparent(dataUrl: string): Promise<string> {
-  return applyAlphaTransparency(dataUrl);
+export function variationFileName(v: Variation, indexInGroup: number): string {
+  const idx = slotIndex(v.assetType, v.slotKey);
+  const num = String((idx === Number.MAX_SAFE_INTEGER ? indexInGroup : idx) + 1).padStart(2, '0');
+  return `${v.assetType}_${num}_${safeFileName(v.label)}.png`;
 }
-// 下位互換用エイリアス
-export const makeWhiteTransparent = makeBackgroundTransparent;
 
-// DataURL (PNG base64) から Uint8Array バイト配列へ変換
 function dataUrlToBytes(dataUrl: string): Uint8Array {
   const base64Part = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
-  const binaryString = atob(base64Part);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
+  const bin = atob(base64Part);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return bytes;
 }
 
-/**
- * 9個の画像（メイン画像1個、スタンプ8個、トークルームタブ画像1個）および印刷用PDF (sample.pdf) を
- * クロマキー透過処理したうえでZip化し、Cloudflare Worker/R2にアップロードしてQRコード（DataURL）を返却する
- */
-export async function prepareStampZipAndGenerateQr(
-  mainImage: string | null,
-  tabImage: string | null,
-  savedStamps: string[],
-  pdfBytesGetter?: (qrDataUrl: string) => Promise<Uint8Array>
-): Promise<{ downloadUrl: string; qrDataUrl: string }> {
+function triggerDownload(href: string, fileName: string) {
+  const a = document.createElement('a');
+  a.href = href;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+export function downloadDataUrl(dataUrl: string, fileName: string) {
+  triggerDownload(dataUrl, fileName);
+}
+
+export async function downloadVariationsZip(
+  zipName: string,
+  variations: Variation[],
+  extras: { name: string; dataUrl: string }[] = []
+): Promise<void> {
   const zip = new JSZip();
+  extras.forEach(e => zip.file(e.name, dataUrlToBytes(e.dataUrl)));
 
-  // 1. メイン画像 (main.png)
-  if (mainImage) {
-    const transparentMain = await makeBackgroundTransparent(mainImage);
-    zip.file('main.png', dataUrlToBytes(transparentMain));
-  }
-
-  // 2. スタンプ画像8個 (01.png ～ 08.png)
-  for (let i = 0; i < 8; i++) {
-    const stampUrl = savedStamps[i];
-    if (stampUrl) {
-      const transparentStamp = await makeBackgroundTransparent(stampUrl);
-      const filename = `${String(i + 1).padStart(2, '0')}.png`;
-      zip.file(filename, dataUrlToBytes(transparentStamp));
-    }
-  }
-
-  // 3. トークルームタブ画像 (tab.png)
-  const tabImageBase = tabImage || mainImage || savedStamps[0];
-  if (tabImageBase) {
-    const transparentTab = await makeBackgroundTransparent(tabImageBase);
-    zip.file('tab.png', dataUrlToBytes(transparentTab));
-  }
-
-  // 8文字ランダムID
-  const code8 = generateRandomCode(8);
-  const filename = `${code8}.zip`;
-
-  // Cloudflare Worker API URL (.envで上書き可能)
-  const workerEndpoint = import.meta.env.VITE_CLOUDFLARE_WORKER_URL || 'https://stamp.ritan-lab.jp';
-
-  // 100%Webページとしてブラウザ認識させるため末尾に.zipを付けないURL
-  let downloadUrl = `${workerEndpoint}/p/${code8}`;
-
-  // QRコード生成
-  const qrDataUrl = await QRCode.toDataURL(downloadUrl, {
-    margin: 1,
-    width: 300,
+  const counters = new Map<string, number>();
+  variations.forEach(v => {
+    const i = counters.get(v.assetType) ?? 0;
+    counters.set(v.assetType, i + 1);
+    zip.folder(safeFileName(ASSET_DEFS[v.assetType].label))?.file(variationFileName(v, i), dataUrlToBytes(v.image));
   });
 
-  // 4. 印刷用PDFを "sample.pdf" の名称でZipへ格納
-  if (pdfBytesGetter) {
-    try {
-      const pdfBytes = await pdfBytesGetter(qrDataUrl);
-      zip.file('sample.pdf', pdfBytes);
-    } catch (e) {
-      console.warn("Could not include sample.pdf in Zip:", e);
-    }
-  }
-
-  // Zipファイル生成
-  const zipBlob = await zip.generateAsync({ type: 'blob' });
-
-  try {
-    // Worker の CORS は Content-Type のみ許可。Authorization を付けるとプリフライトで遮断される
-    const uploadRes = await fetch(`${workerEndpoint}/upload?filename=${encodeURIComponent(filename)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/zip' },
-      body: zipBlob,
-    });
-
-    if (uploadRes.ok) {
-      const resJson = await uploadRes.json();
-      if (resJson.downloadUrl) {
-        downloadUrl = resJson.downloadUrl;
-      }
-    } else {
-      console.warn("Cloudflare Worker upload returned non-200 response, using fallback URL format");
-    }
-  } catch (err) {
-    console.warn("Could not reach Cloudflare Worker endpoint, generating QR code with fallback URL:", err);
-  }
-
-  return { downloadUrl, qrDataUrl };
+  const blob = await zip.generateAsync({ type: 'blob' });
+  const url = URL.createObjectURL(blob);
+  triggerDownload(url, `${safeFileName(zipName)}.zip`);
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
 }

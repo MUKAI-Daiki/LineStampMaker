@@ -21,21 +21,20 @@ const steps = [
   },
   {
     number: 3,
-    title: 'スタンプ作成',
-    description: 'ポーズや感情、文字を選んで、8個のスタンプを作ります。',
+    title: 'アセット一括生成',
+    description: 'RPG・SLG・アクション・ノベル用の向き・ポーズ・表情をまとめて作ります。',
     color: 'bg-amber-50 border-amber-200 text-amber-700',
-    image: '/images/onboarding/Step2.jpeg',
   },
   {
     number: 4,
-    title: 'メイン画像・タブ画像',
-    description: '販売ページ用のメイン画像とタブ画像を自動生成します。',
+    title: '微調整・追加',
+    description: '1枚ずつ修正したり、画像を参照して新しいバリエーションを追加できます。',
     color: 'bg-rose-50 border-rose-200 text-rose-700',
   },
   {
     number: 5,
-    title: '印刷・ダウンロード',
-    description: 'スタンプ一覧をPDFで確認し、ZIPでダウンロードできます。',
+    title: '保存・ダウンロード',
+    description: '画像はアカウントに自動保存。透過PNGをZIPでまとめてダウンロードできます。',
     color: 'bg-teal-50 border-teal-200 text-teal-700',
   },
 ];
@@ -45,7 +44,7 @@ export default function OnboardingPage({ onStart }: OnboardingPageProps) {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-4 px-3 font-biz-ud flex flex-col">
       <div className="w-full max-w-6xl mx-auto flex-1 flex flex-col">
         <h1 className="text-center text-xl md:text-2xl font-extrabold text-gray-800 mb-3">
-          <span className="inline-block border-b-2 border-green-500 pb-0.5">「手描きでスタンプ」</span>つくり方
+          <span className="inline-block border-b-2 border-green-500 pb-0.5">「オリキャラメーカー」</span>つくり方
         </h1>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 mb-3">

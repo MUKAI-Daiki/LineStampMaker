@@ -17,18 +17,18 @@ export default function LoginPage() {
           <div className="w-20 h-20 rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center justify-center overflow-hidden">
             <img
               src="/favicon-192x192.png"
-              alt="手描きでスタンプメーカーのアイコン"
+              alt="オリキャラメーカーのアイコン"
               className="w-14 h-14 object-contain"
             />
           </div>
 
           <div className="text-center">
             <h1 className="text-2xl font-bold text-gray-800 tracking-tight">
-              手描きでスタンプメーカー
+              オリキャラメーカー
             </h1>
             <p className="text-sm text-gray-500 mt-2 leading-relaxed">
               名古屋芸術大学の学生・教職員向け<br />
-              LINE スタンプ制作ツール
+              ゲーム・Webアプリ用キャラクター制作ツール
             </p>
           </div>
 

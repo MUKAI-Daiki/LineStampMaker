@@ -71,7 +71,7 @@ export function embedPngMetadata(dataUrl: string, modelName: string = 'gemini-3.
     const timestamp = new Date().toISOString();
 
     const physChunk = createPhysChunk(100);
-    const softwareChunk = createTextChunk('Software', 'RiTan Lab. 手描きでスタンプメーカー');
+    const softwareChunk = createTextChunk('Software', 'RiTan Lab. オリキャラメーカー');
     const timeChunk = createTextChunk('Creation Time', timestamp);
     const aiChunk = createTextChunk('Comment', `Generative AI Model: ${modelName}`);
 

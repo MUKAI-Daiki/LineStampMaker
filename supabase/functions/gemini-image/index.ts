@@ -16,6 +16,8 @@ const ALLOWED_MODELS = new Set([
 
 const MAX_BODY_BYTES = 12 * 1024 * 1024;
 const MAX_PROMPT_CHARS = 20000;
+const MAX_IMAGES = 4;
+const BASE64_RE = /^[A-Za-z0-9+/=\s]+$/;
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -75,7 +77,7 @@ Deno.serve(async (req) => {
     return json({ error: "Payload too large" }, 413);
   }
 
-  let payload: { model?: unknown; prompt?: unknown; imageBase64?: unknown };
+  let payload: { model?: unknown; prompt?: unknown; imageBase64?: unknown; imagesBase64?: unknown };
   try {
     payload = JSON.parse(raw);
   } catch {
@@ -84,7 +86,9 @@ Deno.serve(async (req) => {
 
   const model = typeof payload.model === "string" ? payload.model : "";
   const prompt = typeof payload.prompt === "string" ? payload.prompt : "";
-  const imageBase64 = typeof payload.imageBase64 === "string" ? payload.imageBase64 : "";
+  const images: string[] = Array.isArray(payload.imagesBase64)
+    ? payload.imagesBase64.filter((v): v is string => typeof v === "string")
+    : typeof payload.imageBase64 === "string" ? [payload.imageBase64] : [];
 
   if (!ALLOWED_MODELS.has(model)) {
     return json({ error: "Invalid request" }, 400);
@@ -92,7 +96,11 @@ Deno.serve(async (req) => {
   if (!prompt || prompt.length > MAX_PROMPT_CHARS) {
     return json({ error: "Invalid request" }, 400);
   }
-  if (!imageBase64 || !/^[A-Za-z0-9+/=\s]+$/.test(imageBase64)) {
+  if (
+    images.length === 0 || images.length > MAX_IMAGES ||
+    (Array.isArray(payload.imagesBase64) && images.length !== payload.imagesBase64.length) ||
+    images.some((img) => !img || !BASE64_RE.test(img))
+  ) {
     return json({ error: "Invalid request" }, 400);
   }
 
@@ -136,7 +144,7 @@ Deno.serve(async (req) => {
             {
               role: "user",
               parts: [
-                { inlineData: { mimeType: "image/png", data: imageBase64 } },
+                ...images.map((data) => ({ inlineData: { mimeType: "image/png", data } })),
                 { text: prompt },
               ],
             },

@@ -1,27 +1,46 @@
-import { ensureBase64PngData, processStampImage } from './stampProcessing';
+import { ensureBase64PngData, processCharacterImage } from './imageProcessing';
 import { supabase } from './supabaseClient';
 import { isLocalDev } from './isLocalDev';
-import { PLACEHOLDER_IMG } from './constants';
+
+export const MODEL_STANDARD = 'gemini-3.1-flash-image';
+export const MODEL_LITE = 'gemini-3.1-flash-lite-image';
+export type ModelName = typeof MODEL_STANDARD | typeof MODEL_LITE;
+
+export const MAX_REFERENCE_IMAGES = 4;
 
 export const NEGATIVE_PROMPT = `
 
 ## 除外・絶対禁止事項
-- 【絶対完全厳禁】絵画の額縁、飾り枠、額（フレーム）、四方の外枠・枠線・ボーダー、黒枠、白枠、ボックス線、二重枠の描画。画像の外周四方には一切の枠線やフレームを描かず、100%均一な単色紫色（#FF00FF）のみとすること
-- 指示以外のテキスト
+- 【絶対完全厳禁】絵画の額縁、飾り枠、四方の外枠・枠線・ボーダー、黒枠、白枠、ボックス線、二重枠の描画。画像の外周四方には一切の枠線やフレームを描かず、100%均一な単色紫色（#FF00FF）のみとすること
+- 文字・ロゴ・ラベル・番号・吹き出しなど、指示以外のテキスト
 - 写真のようなリアルな質感
-- 枠線・フレーム・額縁・ボーダー全般
-- 画像の外枠に密着した描画（※LINEスタンプ公式規約に従い、画像外枠とコンテンツの間に必ず10pxの余白を空けること）
+- 地面・床・影・背景美術・エフェクト背景（キャラクター単体のみを描くこと）
+- 複数キャラクターの同時描画、1枚の中への複数ポーズの並列描画（1枚につき1体・1ポーズのみ）
+- キャラクターの見切れ（頭頂・足先・武器などが画像の外にはみ出さないよう、周囲に余白を空けること）
 - 背景への影・グラデーション・白背景・柄（背景は単色のどぎつい鮮やかな濃い紫色・クロマキーマゼンタ #FF00FF のみとすること）`;
 
 const GEMINI_DIRECT_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+const TIMEOUT_MS = 60000;
 
-function buildGeminiRequestBody(prompt: string, imageBase64: string) {
+export interface GenerateImageOptions {
+  model: ModelName;
+  prompt: string;
+  /** data URLs. 1枚目が主参照。 */
+  images: string[];
+  /** 1枚目が手描き線画のとき true（白黒化前処理を行う） */
+  isLineArt?: boolean;
+  abortControllerRef: React.RefObject<AbortController | null>;
+  isCancelledRef: React.RefObject<boolean>;
+  onError?: (msg: string) => void;
+}
+
+function buildGeminiRequestBody(prompt: string, imagesBase64: string[]) {
   return {
     contents: [
       {
         role: 'user',
         parts: [
-          { inlineData: { mimeType: 'image/png', data: imageBase64 } },
+          ...imagesBase64.map(data => ({ inlineData: { mimeType: 'image/png', data } })),
           { text: prompt },
         ],
       },
@@ -30,30 +49,39 @@ function buildGeminiRequestBody(prompt: string, imageBase64: string) {
   };
 }
 
-export async function callGeminiImageApi(
-  selectedModel: string,
-  prompt: string,
-  inputImageBase64: string,
-  abortControllerRef: React.RefObject<AbortController | null>,
-  isCancelledRef: React.RefObject<boolean>,
-  onError?: (msg: string) => void,
-  isLineArt: boolean = false,
-  overrideModel?: string
-): Promise<string> {
+function describeHttpError(status: number, local: boolean): string {
+  if (status === 429) return 'API利用上限（レート制限）に達しました。しばらく時間をおいて再試行してください。';
+  if (!local && status === 402) return 'スタミナが足りません。時間をおくと回復します（1時間に1回復）';
+  if (status === 401 || status === 403) {
+    return local
+      ? 'APIキーが無効です。.envファイルの VITE_GEMINI_API_KEY を確認してください。'
+      : 'この機能を利用する権限がありません。大学（nua.ac.jp）のアカウントでログインしてください。';
+  }
+  if (status === 413) return '参照画像のサイズが大きすぎます。参照画像の枚数を減らしてください。';
+  if (status === 503) return 'サーバー側の画像生成キーが未設定です。管理者に連絡してください。';
+  if (status >= 500) return '画像生成サーバーで問題が発生しています。再度お試しください。';
+  return `画像生成エラー (${status})`;
+}
+
+/** 成功時は透過処理済みの PNG data URL、失敗時は null */
+export async function generateImage(opts: GenerateImageOptions): Promise<string | null> {
+  const { model, prompt, images, isLineArt = false, abortControllerRef, isCancelledRef, onError } = opts;
   const local = isLocalDev();
-  const modelName = overrideModel || selectedModel;
-  const cleanBase64 = await ensureBase64PngData(inputImageBase64, isLineArt);
+  const refs = images.slice(0, MAX_REFERENCE_IMAGES);
+  if (refs.length === 0) {
+    onError?.('参照画像がありません。');
+    return null;
+  }
+  const cleanImages = await Promise.all(refs.map((img, i) => ensureBase64PngData(img, isLineArt && i === 0)));
   const fullPrompt = prompt + NEGATIVE_PROMPT;
 
-  console.group("🚀 【画像生成リクエスト送信】");
-  console.log("📌 送信モデル:", modelName);
-  console.log("📌 モード:", local ? "ローカル直接呼び出し" : "Edge Function経由");
-  console.log("📄 送信プロンプト:\n", fullPrompt);
+  console.groupCollapsed(`[画像生成] ${model} / 参照${cleanImages.length}枚`);
+  console.log(fullPrompt);
   console.groupEnd();
 
   const controller = new AbortController();
   abortControllerRef.current = controller;
-  const timeoutId = setTimeout(() => controller.abort(), 30000);
+  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
     let apiUrl: string;
@@ -63,127 +91,84 @@ export async function callGeminiImageApi(
     if (local) {
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
       if (!apiKey) {
-        const msg = ".envファイルに VITE_GEMINI_API_KEY が設定されていません。APIキーを記入してください。";
-        console.warn(msg);
-        if (onError) onError(msg);
-        return PLACEHOLDER_IMG;
+        onError?.('.envファイルに VITE_GEMINI_API_KEY が設定されていません。APIキーを記入してください。');
+        return null;
       }
-      apiUrl = `${GEMINI_DIRECT_URL}/${encodeURIComponent(modelName)}:generateContent?key=${apiKey}`;
+      apiUrl = `${GEMINI_DIRECT_URL}/${encodeURIComponent(model)}:generateContent?key=${apiKey}`;
       headers = { 'Content-Type': 'application/json' };
-      body = JSON.stringify(buildGeminiRequestBody(fullPrompt, cleanBase64));
+      body = JSON.stringify(buildGeminiRequestBody(fullPrompt, cleanImages));
     } else {
       const { data: { session } } = await supabase.auth.getSession();
       const accessToken = session?.access_token;
       if (!accessToken) {
-        const msg = "ログインの有効期限が切れました。再度ログインしてください。";
-        console.warn(msg);
-        if (onError) onError(msg);
-        return PLACEHOLDER_IMG;
+        onError?.('ログインの有効期限が切れました。再度ログインしてください。');
+        return null;
       }
       apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gemini-image`;
-      headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
-      };
-      body = JSON.stringify({ model: modelName, prompt: fullPrompt, imageBase64: cleanBase64 });
+      headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` };
+      body = JSON.stringify({ model, prompt: fullPrompt, imagesBase64: cleanImages });
     }
 
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers,
-      signal: controller.signal,
-      body,
-    });
-
-    clearTimeout(timeoutId);
+    const response = await fetch(apiUrl, { method: 'POST', headers, signal: controller.signal, body });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      let errorMsg = `画像生成エラー (${response.status})`;
-      if (response.status === 429) {
-        errorMsg = "API利用上限（レート制限）に達しました。しばらく時間をおいて再試行してください。";
-      } else if (!local && response.status === 402) {
-        errorMsg = "スタミナが足りません。時間をおくと回復します（1時間に1回復）";
-      } else if (response.status === 401 || response.status === 403) {
-        errorMsg = local
-          ? "APIキーが無効です。.envファイルの VITE_GEMINI_API_KEY を確認してください。"
-          : "この機能を利用する権限がありません。大学（nua.ac.jp）のアカウントでログインしてください。";
-      } else if (response.status === 503) {
-        errorMsg = "サーバー側の画像生成キーが未設定です。管理者に連絡してください。";
-      } else if (response.status >= 500) {
-        errorMsg = "画像生成サーバーで問題が発生しています。再度お試しください。";
-      }
-      console.error("❌ 画像生成エラー応答:", errorText);
-      if (onError) onError(errorMsg);
-      return PLACEHOLDER_IMG;
+      console.error('画像生成エラー応答:', response.status, await response.text());
+      onError?.(describeHttpError(response.status, local));
+      return null;
     }
 
     const data = await response.json();
-
-    console.group("📥 【Gemini API 受信データ（AIから実際に取得した情報）】");
-    console.log("🌐 ステータス:", response.status, response.statusText);
-    console.log("🏷️ モデルバージョン (modelVersion):", data.modelVersion || modelName);
-    console.log("📊 トークン消費・使用メタデータ (usageMetadata):", data.usageMetadata || "なし");
-    console.log("🏁 終了理由 (finishReason):", data.candidates?.[0]?.finishReason || "UNKNOWN");
-    console.log("📦 AIから実際に取得した全レスポンスデータ (Raw Response Data):", data);
-    console.groupEnd();
-
-    const parts = data.candidates?.[0]?.content?.parts || [];
-    const imagePart = parts.find((p: any) => p && p.inlineData && p.inlineData.data);
+    const parts: { inlineData?: { data?: string; mimeType?: string } }[] = data?.candidates?.[0]?.content?.parts ?? [];
+    const imagePart = parts.find(p => p?.inlineData?.data);
     if (imagePart?.inlineData?.data) {
       const mime = imagePart.inlineData.mimeType || 'image/png';
-      const rawDataUrl = `data:${mime};base64,${imagePart.inlineData.data}`;
-      return await processStampImage(rawDataUrl, modelName);
+      return await processCharacterImage(`data:${mime};base64,${imagePart.inlineData.data}`, model);
     }
 
-    const noImgMsg = "APIから画像データが返却されませんでした。";
-    console.warn("⚠️ candidates[0]内にinlineDataが含まれていません:", data.candidates?.[0]);
-    if (onError) onError(noImgMsg);
-    return PLACEHOLDER_IMG;
+    console.warn('画像データなし:', data?.candidates?.[0]);
+    onError?.('APIから画像データが返却されませんでした。');
+    return null;
   } catch (err: unknown) {
-    clearTimeout(timeoutId);
-    let errMsg = "画像生成中にエラーが発生しました。";
+    let errMsg = '画像生成中にエラーが発生しました。';
     if (err instanceof Error && err.name === 'AbortError') {
       errMsg = isCancelledRef.current
-        ? "画像の生成を中止しました。"
-        : "生成処理がタイムアウトしました（30秒）。通信環境を確認し再度お試しください。";
+        ? '画像の生成を中止しました。'
+        : '生成処理がタイムアウトしました（60秒）。通信環境を確認し再度お試しください。';
     }
-    console.error("Gemini API 呼び出しエラー:", err);
-    if (onError) onError(errMsg);
-    return PLACEHOLDER_IMG;
+    console.error('Gemini API 呼び出しエラー:', err);
+    onError?.(errMsg);
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
-export async function callGeminiImageApiWithRetry(
-  selectedModel: string,
-  prompt: string,
-  inputImageBase64: string,
-  abortControllerRef: React.RefObject<AbortController | null>,
-  isCancelledRef: React.RefObject<boolean>,
-  onError?: (msg: string) => void,
-  isLineArt: boolean = false,
-  overrideModel?: string,
-  maxRetries: number = 2
-): Promise<string> {
+export async function generateImageWithRetry(opts: GenerateImageOptions, maxRetries = 2): Promise<string | null> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    if (isCancelledRef.current) break;
-    const res = await callGeminiImageApi(
-      selectedModel,
-      prompt,
-      inputImageBase64,
-      abortControllerRef,
-      isCancelledRef,
-      attempt === maxRetries ? onError : undefined,
-      isLineArt,
-      overrideModel
-    );
-    if (res && res !== PLACEHOLDER_IMG) {
-      return res;
-    }
-    if (attempt < maxRetries && !isCancelledRef.current) {
-      console.warn(`⚠️ 画像生成未完了のため、1.5秒後に自動再試行します... (試行 ${attempt}/${maxRetries})`);
+    if (opts.isCancelledRef.current) break;
+    const res = await generateImage({ ...opts, onError: attempt === maxRetries ? opts.onError : undefined });
+    if (res) return res;
+    if (attempt < maxRetries && !opts.isCancelledRef.current) {
       await new Promise(r => setTimeout(r, 1500));
     }
   }
-  return PLACEHOLDER_IMG;
+  return null;
+}
+
+export interface GenerationRequest {
+  model: ModelName;
+  prompt: string;
+  images: string[];
+}
+
+export type GenerationResult =
+  | { ok: true; image: string }
+  | { ok: false; reason: 'stamina' | 'cancelled' | 'failed' };
+
+/** 画面側から画像生成を呼ぶための窓口（スタミナ確認・中止・エラー表示込み） */
+export interface GenerationRunner {
+  begin: () => void;
+  cancel: () => void;
+  isCancelled: () => boolean;
+  run: (req: GenerationRequest) => Promise<GenerationResult>;
 }
