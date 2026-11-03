@@ -31,6 +31,8 @@ export interface GenerateImageOptions {
   isLineArt?: boolean;
   /** true のとき背景透過などの後処理をせず、生成画像をそのまま返す */
   rawOutput?: boolean;
+  /** 429などの再試行不可エラー時に true が設定される（generateImageWithRetry が使用） */
+  nonRetryableRef?: { current: boolean };
   abortControllerRef: React.RefObject<AbortController | null>;
   isCancelledRef: React.RefObject<boolean>;
   onError?: (msg: string) => void;
@@ -52,7 +54,7 @@ function buildGeminiRequestBody(prompt: string, imagesBase64: string[]) {
 }
 
 function describeHttpError(status: number, local: boolean): string {
-  if (status === 429) return 'API利用上限（レート制限）に達しました。しばらく時間をおいて再試行してください。';
+  if (status === 429) return 'Gemini APIの無料枠の利用上限に達しました。大约15時間後にリセットされます。付费プランのAPIキーを使用するか、「自動抽出（端末内処理）」をご利用ください。';
   if (!local && status === 402) return 'スタミナが足りません。時間をおくと回復します（1時間に1回復）';
   if (status === 401 || status === 403) {
     return local
@@ -67,7 +69,7 @@ function describeHttpError(status: number, local: boolean): string {
 
 /** 成功時は透過処理済みの PNG data URL、失敗時は null */
 export async function generateImage(opts: GenerateImageOptions): Promise<string | null> {
-  const { model, prompt, images, isLineArt = false, rawOutput = false, abortControllerRef, isCancelledRef, onError } = opts;
+  const { model, prompt, images, isLineArt = false, rawOutput = false, nonRetryableRef, abortControllerRef, isCancelledRef, onError } = opts;
   const local = isLocalDev();
   const refs = images.slice(0, MAX_REFERENCE_IMAGES);
   if (refs.length === 0) {
@@ -116,6 +118,9 @@ export async function generateImage(opts: GenerateImageOptions): Promise<string 
 
     if (!response.ok) {
       console.error('画像生成エラー応答:', response.status, await response.text());
+      if (response.status === 429 && nonRetryableRef) {
+        nonRetryableRef.current = true;
+      }
       onError?.(describeHttpError(response.status, local));
       return null;
     }
@@ -148,10 +153,20 @@ export async function generateImage(opts: GenerateImageOptions): Promise<string 
 }
 
 export async function generateImageWithRetry(opts: GenerateImageOptions, maxRetries = 2): Promise<string | null> {
+  const nonRetryable = opts.nonRetryableRef ?? { current: false };
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     if (opts.isCancelledRef.current) break;
-    const res = await generateImage({ ...opts, onError: attempt === maxRetries ? opts.onError : undefined });
+    nonRetryable.current = false;
+    const res = await generateImage({
+      ...opts,
+      nonRetryableRef: nonRetryable,
+      // 最終試行、または429等の再試行不可エラーの場合のみエラーを表示
+      onError: attempt === maxRetries
+        ? opts.onError
+        : (msg: string) => { if (nonRetryable.current) opts.onError?.(msg); },
+    });
     if (res) return res;
+    if (nonRetryable.current) break;
     if (attempt < maxRetries && !opts.isCancelledRef.current) {
       await new Promise(r => setTimeout(r, 1500));
     }
