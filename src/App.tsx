@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Camera, Pen, Eraser, Undo, ArrowRight, Image as ImageIcon, Check, Shuffle, Trash2, X, Square, Hand, FolderOpen, Plus, LogOut, Crop, RotateCcw, BookOpen, Zap } from 'lucide-react';
+import { Camera, Pen, Eraser, Undo, ArrowRight, Image as ImageIcon, Check, Shuffle, Trash2, X, Square, Hand, FolderOpen, Plus, LogOut, RotateCcw, BookOpen, Zap } from 'lucide-react';
 import { BULK_ASSET_TYPES, type BulkAssetType, type Mode } from './characterAssets';
 import { generateImage, generateImageWithRetry, MODEL_STANDARD, NEGATIVE_PROMPT, type GenerationRunner, type ModelName } from './utils/geminiApi';
 import { CHECKER_BG, PLACEHOLDER_IMG } from './utils/constants';
@@ -11,7 +11,8 @@ import { useVariations } from './utils/useVariations';
 import { AssetGenerationStep } from './components/AssetGenerationStep';
 import { AdjustmentStep } from './components/AdjustmentStep';
 import { DownloadStep } from './components/DownloadStep';
-import type { StudioProps } from './components/studioTypes';
+import { LineArtExtractModal } from './components/LineArtExtractModal';
+import type { StaminaInfo, StudioProps } from './components/studioTypes';
 
 const LOCAL = isLocalDev();
 
@@ -102,7 +103,7 @@ export default function App({ userId, isAdmin, onShowGuide }: AppProps) {
     },
     cancel: cancelGeneration,
     isCancelled: () => isCancelledRef.current,
-    run: async ({ model, prompt, images }) => {
+    run: async ({ model, prompt, images, rawOutput }) => {
       if (isCancelledRef.current) return { ok: false, reason: 'cancelled' };
       if (!(await consumeStamina(model))) {
         setStaminaError(staminaShortMessage(model));
@@ -112,6 +113,7 @@ export default function App({ userId, isAdmin, onShowGuide }: AppProps) {
         model,
         prompt,
         images,
+        rawOutput,
         abortControllerRef,
         isCancelledRef,
         onError: setApiErrorMessage,
@@ -295,174 +297,41 @@ export default function App({ userId, isAdmin, onShowGuide }: AppProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const cameraStreamRef = useRef<MediaStream | null>(null);
 
-  // 画像調整モーダル関連State
-  const [adjustRawImage, setAdjustRawImage] = useState<string | null>(null);
-  const [adjustContrast, setAdjustContrast] = useState<number>(150);
-  const [adjustBrightness, setAdjustBrightness] = useState<number>(120);
+  const [extractSource, setExtractSource] = useState<string | null>(null);
   const [lastRawImage, setLastRawImage] = useState<string | null>(null);
+  const [showImportHint, setShowImportHint] = useState(false);
 
-  // トリミング関連State
-  const [cropBox, setCropBox] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
-  const [isDraggingCrop, setIsDraggingCrop] = useState(false);
-  const [cropDragStart, setCropDragStart] = useState<{ x: number; y: number } | null>(null);
-  const adjustContainerRef = useRef<HTMLDivElement>(null);
-  const adjustImgRef = useRef<HTMLImageElement>(null);
+  useEffect(() => {
+    if (!showImportHint) return;
+    const t = setTimeout(() => setShowImportHint(false), 5000);
+    return () => clearTimeout(t);
+  }, [showImportHint]);
 
-  // 共通のドキュメントスキャナ処理 (コントラスト・明度のCSSフィルタ適用後 → 適応的白黒化)
-  const processImageToCanvas = (img: HTMLImageElement, contrast: number = 150, brightness: number = 120) => {
-    if (!canvasRef.current) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // CSSフィルタで明度・コントラストを適用して描画
-    ctx.save();
-    ctx.filter = `contrast(${contrast}%) brightness(${brightness}%)`;
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
-    const drawW = img.width * scale;
-    const drawH = img.height * scale;
-    const drawX = (canvas.width - drawW) / 2;
-    const drawY = (canvas.height - drawH) / 2;
-
-    ctx.drawImage(img, drawX, drawY, drawW, drawH);
-    ctx.restore();
-
-    // 適応的白黒化 (線画抽出)
-    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imgData.data;
-
-    let minLum = 255;
-    let maxLum = 0;
-    const luminances = new Float32Array(canvas.width * canvas.height);
-
-    for (let i = 0; i < data.length; i += 4) {
-      const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-      const pxIdx = i / 4;
-      luminances[pxIdx] = lum;
-      if (lum < minLum) minLum = lum;
-      if (lum > maxLum) maxLum = lum;
-    }
-
-    const lumRange = Math.max(1, maxLum - minLum);
-
-    for (let i = 0; i < data.length; i += 4) {
-      const pxIdx = i / 4;
-      const normLum = (luminances[pxIdx] - minLum) / lumRange;
-
-      const threshold = 0.68;
-      let val = 255;
-      if (normLum < threshold) {
-        val = Math.max(0, Math.round((normLum / threshold) * 200 - 50));
-      } else {
-        val = 255;
-      }
-
-      data[i] = val;
-      data[i + 1] = val;
-      data[i + 2] = val;
-      data[i + 3] = 255;
-    }
-
-    ctx.putImageData(imgData, 0, 0);
-    setHistory(prev => [...prev, canvas.toDataURL()]);
-  };
-
-  const openAdjustModal = (dataUrl: string) => {
-    setAdjustContrast(150);
-    setAdjustBrightness(120);
-    setCropBox(null);
-    setIsDraggingCrop(false);
-    setCropDragStart(null);
+  const openExtractModal = (dataUrl: string) => {
     setLastRawImage(dataUrl);
-    setAdjustRawImage(dataUrl);
+    setExtractSource(dataUrl);
   };
 
-  const confirmAdjust = () => {
-    if (!adjustRawImage) return;
+  const applyLineArtToCanvas = (lineArt: string) => {
     const img = new Image();
     img.onload = () => {
-      if (cropBox) {
-        const sx = Math.round(Math.min(cropBox.x1, cropBox.x2) * img.naturalWidth);
-        const sy = Math.round(Math.min(cropBox.y1, cropBox.y2) * img.naturalHeight);
-        const sw = Math.round(Math.abs(cropBox.x2 - cropBox.x1) * img.naturalWidth);
-        const sh = Math.round(Math.abs(cropBox.y2 - cropBox.y1) * img.naturalHeight);
-        if (sw > 10 && sh > 10) {
-          const cropCanvas = document.createElement('canvas');
-          cropCanvas.width = sw;
-          cropCanvas.height = sh;
-          const cropCtx = cropCanvas.getContext('2d');
-          if (cropCtx) {
-            cropCtx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
-            const croppedImg = new Image();
-            croppedImg.onload = () => {
-              processImageToCanvas(croppedImg, adjustContrast, adjustBrightness);
-              setAdjustRawImage(null);
-              setCropBox(null);
-            };
-            croppedImg.src = cropCanvas.toDataURL('image/png');
-            return;
-          }
-        }
-      }
-      processImageToCanvas(img, adjustContrast, adjustBrightness);
-      setAdjustRawImage(null);
-      setCropBox(null);
+      const canvas = canvasRef.current;
+      const ctx = canvas?.getContext('2d');
+      if (!canvas || !ctx) return;
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+      const w = img.width * scale;
+      const h = img.height * scale;
+      ctx.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
+      const snapshot = canvas.toDataURL('image/png');
+      setHistory(prev => [...prev, snapshot]);
+      setCapturedLineArt(snapshot);
+      setTool('pen');
+      setExtractSource(null);
+      setShowImportHint(true);
     };
-    img.src = adjustRawImage;
-  };
-
-  const cancelAdjust = () => {
-    setAdjustRawImage(null);
-    setCropBox(null);
-  };
-
-  const getImageBoundsInContainer = (container: HTMLElement, natW: number, natH: number) => {
-    const cw = container.clientWidth;
-    const ch = container.clientHeight;
-    const scale = Math.min(cw / natW, ch / natH);
-    const w = natW * scale;
-    const h = natH * scale;
-    return { x: (cw - w) / 2, y: (ch - h) / 2, w, h };
-  };
-
-  const screenToImageCoords = (clientX: number, clientY: number): { x: number; y: number } | null => {
-    const container = adjustContainerRef.current;
-    const imgEl = adjustImgRef.current;
-    if (!container || !imgEl) return null;
-    const rect = container.getBoundingClientRect();
-    const bounds = getImageBoundsInContainer(container, imgEl.naturalWidth, imgEl.naturalHeight);
-    const rx = clientX - rect.left - bounds.x;
-    const ry = clientY - rect.top - bounds.y;
-    return { x: Math.max(0, Math.min(1, rx / bounds.w)), y: Math.max(0, Math.min(1, ry / bounds.h)) };
-  };
-
-  const handleCropPointerDown = (e: React.PointerEvent) => {
-    const coords = screenToImageCoords(e.clientX, e.clientY);
-    if (!coords) return;
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    setIsDraggingCrop(true);
-    setCropDragStart(coords);
-    setCropBox({ x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y });
-  };
-
-  const handleCropPointerMove = (e: React.PointerEvent) => {
-    if (!isDraggingCrop || !cropDragStart) return;
-    const coords = screenToImageCoords(e.clientX, e.clientY);
-    if (!coords) return;
-    setCropBox({ x1: cropDragStart.x, y1: cropDragStart.y, x2: coords.x, y2: coords.y });
-  };
-
-  const handleCropPointerUp = () => {
-    setIsDraggingCrop(false);
-    setCropDragStart(null);
-    if (cropBox) {
-      const w = Math.abs(cropBox.x2 - cropBox.x1);
-      const h = Math.abs(cropBox.y2 - cropBox.y1);
-      if (w < 0.03 || h < 0.03) setCropBox(null);
-    }
+    img.src = lineArt;
   };
 
   // Webカメラの起動
@@ -504,7 +373,7 @@ export default function App({ userId, isAdmin, onShowGuide }: AppProps) {
         tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
         const dataUrl = tempCanvas.toDataURL('image/png');
         stopCamera();
-        openAdjustModal(dataUrl);
+        openExtractModal(dataUrl);
       }
     }
   };
@@ -515,7 +384,7 @@ export default function App({ userId, isAdmin, onShowGuide }: AppProps) {
       const reader = new FileReader();
       reader.onload = (event) => {
         const dataUrl = event.target?.result as string;
-        if (dataUrl) openAdjustModal(dataUrl);
+        if (dataUrl) openExtractModal(dataUrl);
       };
       reader.readAsDataURL(file);
     }
@@ -773,6 +642,7 @@ ${baseFreeText ? `\n## 追加指示\n- ${baseFreeText}` : ''}`;
     }
   };
 
+  const staminaInfo: StaminaInfo = { remaining: stamina, unlimited: LOCAL || isAdmin, cost: getStaminaCost };
   const studioProps: StudioProps | null = baseImage
     ? {
         baseImage,
@@ -784,7 +654,7 @@ ${baseFreeText ? `\n## 追加指示\n- ${baseFreeText}` : ''}`;
         runner,
         store,
         mode,
-        stamina: { remaining: stamina, unlimited: LOCAL || isAdmin, cost: getStaminaCost },
+        stamina: staminaInfo,
       }
     : null;
   const currentProject = projectList.find(p => p.id === currentProjectId);
@@ -1016,11 +886,11 @@ ${baseFreeText ? `\n## 追加指示\n- ${baseFreeText}` : ''}`;
 
                   {lastRawImage && history.length > 0 && (
                     <button
-                      onClick={() => openAdjustModal(lastRawImage)}
+                      onClick={() => openExtractModal(lastRawImage)}
                       className="p-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors border border-amber-200"
-                      title="取り込み画像を再調整"
+                      title="取り込み画像から線画を抽出し直す"
                     >
-                      <RotateCcw size={16} /> {mode === 'easy' ? 'もういちど ちょうせい' : '取り込み再調整'}
+                      <RotateCcw size={16} /> {mode === 'easy' ? 'もういちど とりだす' : '線画を再抽出'}
                     </button>
                   )}
 
@@ -1066,6 +936,14 @@ ${baseFreeText ? `\n## 追加指示\n- ${baseFreeText}` : ''}`;
                     }`}
                   style={{ touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
                 />
+                {showImportHint && (
+                  <div className="absolute top-3 inset-x-3 flex justify-center pointer-events-none animate-in fade-in slide-in-from-top-2 duration-300">
+                    <span className={`bg-gray-900/85 text-white font-bold rounded-full shadow-lg flex items-center gap-2 ${mode === 'easy' ? 'text-sm px-4 py-2' : 'text-xs px-3.5 py-1.5'}`}>
+                      <Check size={14} className="text-green-400" />
+                      {mode === 'easy' ? 'せんを のせたよ。ペンや けしごむで なおしてね' : '線画を配置しました。ペン・消しゴムで細かく修正できます'}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1381,163 +1259,15 @@ ${baseFreeText ? `\n## 追加指示\n- ${baseFreeText}` : ''}`;
         </div>
       )}
 
-      {/* 画像調整モーダル (トリミング・コントラスト・明度スライダー) */}
-      {adjustRawImage && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl flex flex-col items-center relative border border-gray-100">
-            <button
-              onClick={cancelAdjust}
-              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
-              title="閉じる"
-            >
-              <X size={24} />
-            </button>
-
-            <h3 className={`font-bold text-gray-800 mb-1 flex items-center gap-2 ${mode === 'easy' ? 'text-xl' : 'text-lg'}`}>
-              {mode === 'easy' ? 'えをちょうせい' : '線画の調整'}
-            </h3>
-            <p className={`text-gray-500 mb-3 ${mode === 'easy' ? 'text-sm' : 'text-xs'}`}>
-              {mode === 'easy' ? 'ドラッグでトリミング、スライダーでちょうせい' : 'ドラッグで範囲を切り抜き、スライダーで濃さと明るさを調整'}
-            </p>
-
-            {/* トリミング＆プレビューエリア */}
-            <div
-              ref={adjustContainerRef}
-              className="w-full aspect-square max-w-[360px] bg-white rounded-2xl overflow-hidden border-2 border-gray-200 shadow-inner mb-3 relative select-none"
-              style={{ touchAction: 'none', cursor: 'crosshair' }}
-              onPointerDown={handleCropPointerDown}
-              onPointerMove={handleCropPointerMove}
-              onPointerUp={handleCropPointerUp}
-            >
-              <img
-                ref={adjustImgRef}
-                src={adjustRawImage}
-                alt="調整プレビュー"
-                className="w-full h-full object-contain pointer-events-none"
-                style={{ filter: `contrast(${adjustContrast}%) brightness(${adjustBrightness}%)` }}
-              />
-              {/* 切り抜き範囲のオーバーレイ */}
-              {cropBox && adjustContainerRef.current && adjustImgRef.current && (() => {
-                const container = adjustContainerRef.current!;
-                const imgEl = adjustImgRef.current!;
-                const bounds = getImageBoundsInContainer(container, imgEl.naturalWidth, imgEl.naturalHeight);
-                const left = bounds.x + Math.min(cropBox.x1, cropBox.x2) * bounds.w;
-                const top = bounds.y + Math.min(cropBox.y1, cropBox.y2) * bounds.h;
-                const width = Math.abs(cropBox.x2 - cropBox.x1) * bounds.w;
-                const height = Math.abs(cropBox.y2 - cropBox.y1) * bounds.h;
-                return (
-                  <>
-                    {/* Dark overlay outside crop region */}
-                    <div className="absolute inset-0 pointer-events-none" style={{
-                      background: `linear-gradient(to right,
-                        rgba(0,0,0,0.5) ${left}px,
-                        transparent ${left}px,
-                        transparent ${left + width}px,
-                        rgba(0,0,0,0.5) ${left + width}px)`
-                    }} />
-                    <div className="absolute pointer-events-none" style={{
-                      left: `${left}px`, top: 0, width: `${width}px`, height: `${top}px`,
-                      background: 'rgba(0,0,0,0.5)'
-                    }} />
-                    <div className="absolute pointer-events-none" style={{
-                      left: `${left}px`, top: `${top + height}px`, width: `${width}px`,
-                      bottom: 0, background: 'rgba(0,0,0,0.5)'
-                    }} />
-                    {/* Crop border */}
-                    <div className="absolute pointer-events-none border-2 border-white" style={{
-                      left: `${left}px`, top: `${top}px`, width: `${width}px`, height: `${height}px`,
-                      boxShadow: '0 0 0 1px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(255,255,255,0.3)'
-                    }}>
-                      {/* Corner handles */}
-                      {[[0,0],[1,0],[0,1],[1,1]].map(([cx,cy]) => (
-                        <div key={`${cx}-${cy}`} className="absolute w-3 h-3 bg-white border-2 border-green-500 rounded-sm pointer-events-none" style={{
-                          left: cx ? 'auto' : '-6px', right: cx ? '-6px' : 'auto',
-                          top: cy ? 'auto' : '-6px', bottom: cy ? '-6px' : 'auto'
-                        }} />
-                      ))}
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-
-            {/* トリミングリセットボタン */}
-            <div className="w-full flex justify-between items-center mb-3">
-              <span className={`font-bold text-gray-500 flex items-center gap-1 ${mode === 'easy' ? 'text-xs' : 'text-[11px]'}`}>
-                <Crop size={13} /> {cropBox
-                  ? (mode === 'easy' ? 'きりぬきON' : 'トリミング範囲あり')
-                  : (mode === 'easy' ? 'ドラッグできりぬき' : 'ドラッグで範囲指定')}
-              </span>
-              {cropBox && (
-                <button
-                  onClick={() => setCropBox(null)}
-                  className="text-xs font-bold text-red-500 hover:text-red-700 flex items-center gap-1 transition-colors"
-                >
-                  <X size={13} /> {mode === 'easy' ? 'リセット' : 'トリミング解除'}
-                </button>
-              )}
-            </div>
-
-            <div className="w-full space-y-4 mb-5">
-              <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <span className={`font-bold text-gray-700 ${mode === 'easy' ? 'text-sm' : 'text-xs'}`}>
-                    {mode === 'easy' ? 'せんの こさ (コントラスト)' : 'コントラスト'}
-                  </span>
-                  <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">{adjustContrast}%</span>
-                </div>
-                <div className="flex items-center gap-3 bg-gray-50 p-2.5 rounded-xl border border-gray-200">
-                  <span className="text-xs text-gray-400 shrink-0">{mode === 'easy' ? 'うすい' : '低'}</span>
-                  <input
-                    type="range"
-                    min="50"
-                    max="300"
-                    value={adjustContrast}
-                    onChange={e => setAdjustContrast(Number(e.target.value))}
-                    className="w-full accent-green-500 cursor-pointer"
-                  />
-                  <span className="text-xs text-gray-400 shrink-0">{mode === 'easy' ? 'こい' : '高'}</span>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <span className={`font-bold text-gray-700 ${mode === 'easy' ? 'text-sm' : 'text-xs'}`}>
-                    {mode === 'easy' ? 'あかるさ (めいど)' : '明度'}
-                  </span>
-                  <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{adjustBrightness}%</span>
-                </div>
-                <div className="flex items-center gap-3 bg-gray-50 p-2.5 rounded-xl border border-gray-200">
-                  <span className="text-xs text-gray-400 shrink-0">{mode === 'easy' ? 'くらい' : '低'}</span>
-                  <input
-                    type="range"
-                    min="50"
-                    max="250"
-                    value={adjustBrightness}
-                    onChange={e => setAdjustBrightness(Number(e.target.value))}
-                    className="w-full accent-blue-500 cursor-pointer"
-                  />
-                  <span className="text-xs text-gray-400 shrink-0">{mode === 'easy' ? 'あかるい' : '高'}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3 w-full">
-              <button
-                onClick={cancelAdjust}
-                className={`flex-1 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors ${mode === 'easy' ? 'py-3.5 text-base' : 'py-3 text-sm'}`}
-              >
-                {mode === 'easy' ? 'やめる' : 'キャンセル'}
-              </button>
-              <button
-                onClick={confirmAdjust}
-                className={`flex-[2] rounded-xl font-bold text-white bg-green-500 hover:bg-green-600 shadow-lg shadow-green-500/30 transition-transform active:scale-95 flex items-center justify-center gap-2 ${mode === 'easy' ? 'py-3.5 text-lg' : 'py-3 text-sm'}`}
-              >
-                <Check size={18} /> {mode === 'easy' ? 'これでOK！' : '取り込む'}
-              </button>
-            </div>
-          </div>
-        </div>
+      {extractSource && (
+        <LineArtExtractModal
+          source={extractSource}
+          mode={mode}
+          runner={runner}
+          stamina={staminaInfo}
+          onCancel={() => setExtractSource(null)}
+          onConfirm={applyLineArtToCanvas}
+        />
       )}
 
       {/* プロジェクト管理モーダル */}

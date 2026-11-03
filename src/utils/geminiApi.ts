@@ -29,6 +29,8 @@ export interface GenerateImageOptions {
   images: string[];
   /** 1枚目が手描き線画のとき true（白黒化前処理を行う） */
   isLineArt?: boolean;
+  /** true のとき背景透過などの後処理をせず、生成画像をそのまま返す */
+  rawOutput?: boolean;
   abortControllerRef: React.RefObject<AbortController | null>;
   isCancelledRef: React.RefObject<boolean>;
   onError?: (msg: string) => void;
@@ -65,7 +67,7 @@ function describeHttpError(status: number, local: boolean): string {
 
 /** 成功時は透過処理済みの PNG data URL、失敗時は null */
 export async function generateImage(opts: GenerateImageOptions): Promise<string | null> {
-  const { model, prompt, images, isLineArt = false, abortControllerRef, isCancelledRef, onError } = opts;
+  const { model, prompt, images, isLineArt = false, rawOutput = false, abortControllerRef, isCancelledRef, onError } = opts;
   const local = isLocalDev();
   const refs = images.slice(0, MAX_REFERENCE_IMAGES);
   if (refs.length === 0) {
@@ -89,7 +91,8 @@ export async function generateImage(opts: GenerateImageOptions): Promise<string 
     let body: string;
 
     if (local) {
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      // Vite inlines this at build time; restricting to DEV keeps the key out of production bundles.
+      const apiKey = import.meta.env.DEV ? import.meta.env.VITE_GEMINI_API_KEY : undefined;
       if (!apiKey) {
         onError?.('.envファイルに VITE_GEMINI_API_KEY が設定されていません。APIキーを記入してください。');
         return null;
@@ -122,7 +125,8 @@ export async function generateImage(opts: GenerateImageOptions): Promise<string 
     const imagePart = parts.find(p => p?.inlineData?.data);
     if (imagePart?.inlineData?.data) {
       const mime = imagePart.inlineData.mimeType || 'image/png';
-      return await processCharacterImage(`data:${mime};base64,${imagePart.inlineData.data}`, model);
+      const dataUrl = `data:${mime};base64,${imagePart.inlineData.data}`;
+      return rawOutput ? dataUrl : await processCharacterImage(dataUrl, model);
     }
 
     console.warn('画像データなし:', data?.candidates?.[0]);
@@ -159,6 +163,7 @@ export interface GenerationRequest {
   model: ModelName;
   prompt: string;
   images: string[];
+  rawOutput?: boolean;
 }
 
 export type GenerationResult =
