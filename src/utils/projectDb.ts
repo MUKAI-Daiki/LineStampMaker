@@ -39,7 +39,7 @@ const LOCAL_STUB_PROJECT: ProjectRow = {
   selected_assets: ['rpg', 'slg', 'act', 'novel'],
   variation_free_text: '',
   is_debug_mode: false,
-  selected_model: 'gemini-3.1-flash-image',
+  selected_model: 'gemini-nano-banana-2.1',
   mode: 'default',
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Copy, Download, Loader as Loader2, Pencil, RefreshCw, RotateCcw, Square, Trash2, Wand as Wand2, X, Zap } from 'lucide-react';
 import { ASSET_DEFS, buildRefinePrompt, buildSlotPrompt, type BulkAssetType } from '../characterAssets';
-import { MODEL_LITE, type ModelName } from '../utils/geminiApi';
+import { MODEL_NANO_BANANA as MODEL, type ModelName } from '../utils/geminiApi';
 import type { Variation } from '../utils/variationDb';
 import { downloadDataUrl, variationFileName } from '../utils/zipService';
 import { PREVIEW_BG_CLASS, PreviewBgToggle, type PreviewBg } from './PreviewBackground';
@@ -17,7 +17,7 @@ interface VariationEditorModalProps extends StudioProps {
 }
 
 export function VariationEditorModal(props: VariationEditorModalProps) {
-  const { variation: v, runner, store, promptCtx, baseImage, stamina, model } = props;
+  const { variation: v, runner, store, promptCtx, baseImage, stamina } = props;
   const [instruction, setInstruction] = useState('');
   const [busy, setBusy] = useState<'refine' | 'regen' | null>(null);
   const [bg, setBg] = useState<PreviewBg>('checker');
@@ -27,15 +27,15 @@ export function VariationEditorModal(props: VariationEditorModalProps) {
 
   const isSlot = v.assetType !== 'custom';
   const slot = isSlot ? ASSET_DEFS[v.assetType].slots.find(s => s.key === v.slotKey) : undefined;
-  const refineCost = stamina.cost(model);
-  const regenCost = stamina.cost(MODEL_LITE);
+  const refineCost = stamina.cost(MODEL);
+  const regenCost = stamina.cost(MODEL);
 
   const execute = async (kind: 'refine' | 'regen') => {
     setBusy(kind);
     runner.begin();
     const result = kind === 'refine'
-      ? await runner.run({ model, prompt: buildRefinePrompt(v.label, instruction, promptCtx), images: [v.image, baseImage] })
-      : await runner.run({ model: MODEL_LITE, prompt: buildSlotPrompt(v.assetType as BulkAssetType, slot!, promptCtx, false), images: [baseImage] });
+      ? await runner.run({ model: MODEL, prompt: buildRefinePrompt(v.label, instruction, promptCtx), images: [v.image, baseImage] })
+      : await runner.run({ model: MODEL, prompt: buildSlotPrompt(v.assetType as BulkAssetType, slot!, promptCtx, false), images: [baseImage] });
     if (result.ok) {
       await store.replaceImage(v.id, result.image);
       if (kind === 'refine') setInstruction('');

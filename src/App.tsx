@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Camera, Pen, Eraser, Undo, ArrowRight, Image as ImageIcon, Check, Shuffle, Trash2, X, Square, Hand, FolderOpen, Plus, LogOut, RotateCcw, BookOpen, Zap } from 'lucide-react';
 import { BULK_ASSET_TYPES, type BulkAssetType, type Mode } from './characterAssets';
-import { generateImage, generateImageWithRetry, MODEL_STANDARD, NEGATIVE_PROMPT, type GenerationRunner, type ModelName } from './utils/geminiApi';
+import { generateImage, generateImageWithRetry, MODEL_NANO_BANANA as MODEL_STANDARD, NEGATIVE_PROMPT, type GenerationRunner, type ModelName } from './utils/geminiApi';
 import { CHECKER_BG, PLACEHOLDER_IMG } from './utils/constants';
 import { listProjects, createProject, updateProject, deleteProject, loadProject, saveProjectImages, type ProjectRow } from './utils/projectDb';
 import { signOut } from './utils/useAuth';

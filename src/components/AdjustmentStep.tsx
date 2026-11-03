@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ArrowLeft, ArrowRight, Film, Plus, Zap } from 'lucide-react';
 import { ASSET_DEFS, ASSET_ORDER, BULK_ASSET_TYPES, slotIndex, type AssetType } from '../characterAssets';
-import { MODEL_LITE, MODEL_STANDARD, type ModelName } from '../utils/geminiApi';
+import { MODEL_NANO_BANANA as MODEL } from '../utils/geminiApi';
 import type { Variation } from '../utils/variationDb';
 import { AnimationPlayer } from './AnimationPlayer';
 import { NewVariationModal } from './NewVariationModal';
@@ -48,7 +48,7 @@ function buildClips(variations: Variation[]): AnimClip[] {
 export function AdjustmentStep(props: AdjustmentStepProps) {
   const { store, stamina, mode } = props;
   const easy = mode === 'easy';
-  const [model, setModel] = useState<ModelName>(MODEL_STANDARD);
+  const model = MODEL;
   const [bg, setBg] = useState<PreviewBg>('checker');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newVariation, setNewVariation] = useState<{ ref?: Variation } | null>(null);
@@ -94,20 +94,9 @@ export function AdjustmentStep(props: AdjustmentStepProps) {
             ))}
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            {!easy && (
-              <div className="flex items-center bg-slate-100 rounded-full p-1 text-xs font-bold" title="修正・追加に使うモデル">
-                {([MODEL_STANDARD, MODEL_LITE] as ModelName[]).map(m => (
-                  <button
-                    key={m}
-                    onClick={() => setModel(m)}
-                    className={`px-3 py-1 rounded-full flex items-center gap-1 transition-colors ${model === m ? 'bg-white text-green-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                  >
-                    {m === MODEL_STANDARD ? '高品質' : 'Lite'}
-                    <span className="flex items-center font-normal"><Zap size={10} />{stamina.cost(m)}</span>
-                  </button>
-                ))}
-              </div>
-            )}
+            <span className="flex items-center gap-1 text-xs font-bold text-slate-500" title="使用モデル">
+              <Zap size={12} />1回スタミナ{stamina.cost(MODEL)}消費
+            </span>
             <PreviewBgToggle value={bg} onChange={setBg} />
           </div>
         </div>

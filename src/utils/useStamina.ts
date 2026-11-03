@@ -4,8 +4,7 @@ import { isLocalDev } from './isLocalDev';
 
 const MAX_STAMINA = 50;
 const STAMINA_COST: Record<string, number> = {
-  'gemini-3.1-flash-image': 2,
-  'gemini-3.1-flash-lite-image': 1,
+  'gemini-nano-banana-2.1': 2,
 };
 
 export interface StaminaState {
@@ -61,7 +60,7 @@ export function useStamina(userId: string | undefined, isAdmin: boolean) {
   }, [syncStamina]);
 
   const getStaminaCost = useCallback((model: string): number => {
-    return STAMINA_COST[model] ?? 1;
+    return STAMINA_COST[model] ?? 2;
   }, []);
 
   const canAfford = useCallback((model: string): boolean => {

@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, Layers, Loader as Loader2, Sparkles, Square, Zap } from 'lucide-react';
 import { ASSET_DEFS, BULK_ASSET_TYPES, buildSlotPrompt, type AssetSlot, type BulkAssetType } from '../characterAssets';
-import { MODEL_LITE } from '../utils/geminiApi';
+import { MODEL_NANO_BANANA } from '../utils/geminiApi';
 import type { Variation } from '../utils/variationDb';
 import { PREVIEW_BG_CLASS, PreviewBgToggle, type PreviewBg } from './PreviewBackground';
 import type { StudioProps } from './studioTypes';
@@ -46,7 +46,7 @@ export function AssetGenerationStep(props: AssetGenerationStepProps) {
     [selectedAssets, regenerateExisting, bySlot]
   );
 
-  const unitCost = stamina.cost(MODEL_LITE);
+  const unitCost = stamina.cost(MODEL_NANO_BANANA);
   const totalCost = jobs.length * unitCost;
   const affordable = stamina.unlimited || stamina.remaining >= totalCost;
 
@@ -84,7 +84,7 @@ export function AssetGenerationStep(props: AssetGenerationStepProps) {
 
       const prev = previousFrame(job);
       const result = await runner.run({
-        model: MODEL_LITE,
+        model: MODEL_NANO_BANANA,
         prompt: buildSlotPrompt(job.type, job.slot, promptCtx, !!prev),
         images: prev ? [baseImage, prev] : [baseImage],
       });
@@ -197,8 +197,8 @@ export function AssetGenerationStep(props: AssetGenerationStepProps) {
                 {stamina.unlimited ? `${totalCost}（無制限）` : `${totalCost} / 残り ${stamina.remaining}`}
               </span>
             </div>
-            {!affordable && <p className="text-red-600 mt-1 leading-relaxed">スタミナが足りない分は、途中で生成を止めます（1時間に1回復）。</p>}
-            <p className="text-slate-400 mt-1">一括生成は軽量モデルで行います。</p>
+            {!affordable && <p className="text-red-600 mt-1 leading-relaxed">スタミナが足りないため一括生成できません（1時間に1回復）。</p>}
+            <p className="text-slate-400 mt-1">1枚あたりスタミナ2を消費します。</p>
           </div>
 
           {isRunning ? (
@@ -211,7 +211,7 @@ export function AssetGenerationStep(props: AssetGenerationStepProps) {
           ) : (
             <button
               onClick={runBulk}
-              disabled={jobs.length === 0}
+              disabled={jobs.length === 0 || !affordable}
               className="w-full py-3 rounded-full font-bold text-white bg-green-500 hover:bg-green-600 shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 disabled:bg-slate-300 disabled:shadow-none disabled:cursor-not-allowed"
             >
               <Sparkles size={18} /> {jobs.length === 0 ? '生成する画像がありません' : `${jobs.length}枚を一括生成`}

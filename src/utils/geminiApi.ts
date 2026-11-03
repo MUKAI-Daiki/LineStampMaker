@@ -2,9 +2,10 @@ import { ensureBase64PngData, processCharacterImage } from './imageProcessing';
 import { supabase } from './supabaseClient';
 import { isLocalDev } from './isLocalDev';
 
-export const MODEL_STANDARD = 'gemini-3.1-flash-image';
-export const MODEL_LITE = 'gemini-3.1-flash-lite-image';
-export type ModelName = typeof MODEL_STANDARD | typeof MODEL_LITE;
+export const MODEL_NANO_BANANA = 'gemini-nano-banana-2.1';
+export const MODEL_STANDARD = MODEL_NANO_BANANA;
+export const MODEL_LITE = MODEL_NANO_BANANA;
+export type ModelName = typeof MODEL_NANO_BANANA;
 
 export const MAX_REFERENCE_IMAGES = 4;
 

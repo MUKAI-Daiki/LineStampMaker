@@ -10,8 +10,7 @@ const ALLOWED_DOMAIN = "nua.ac.jp";
 const ADMIN_EMAIL = "d-mukai@nua.ac.jp";
 
 const ALLOWED_MODELS = new Set([
-  "gemini-3.1-flash-image",
-  "gemini-3.1-flash-lite-image",
+  "gemini-nano-banana-2.1",
 ]);
 
 const MAX_BODY_BYTES = 12 * 1024 * 1024;

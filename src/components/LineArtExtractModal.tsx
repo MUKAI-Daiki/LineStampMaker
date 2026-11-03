@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Crop, Loader as Loader2, ScanLine, Sparkles, Square, X, Zap } from 'lucide-react';
 import type { Mode } from '../characterAssets';
-import { MODEL_STANDARD, type GenerationRunner } from '../utils/geminiApi';
+import { MODEL_NANO_BANANA as MODEL_STANDARD, type GenerationRunner } from '../utils/geminiApi';
 import { AI_LINE_ART_PROMPT, cleanLineArt, cropToCanvas, extractLineArtLocal, loadImage, type CropRect } from '../utils/lineArtExtraction';
 import type { StaminaInfo } from './studioTypes';
 
