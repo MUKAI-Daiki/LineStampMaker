@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Camera, Pen, Eraser, Undo, ArrowRight, Image as ImageIcon, Check, Shuffle, Trash2, X, Square, Hand, FolderOpen, Plus, LogOut, RotateCcw, BookOpen, Zap } from 'lucide-react';
+import { Camera, Pen, Eraser, Undo, ArrowRight, Image as ImageIcon, Check, Shuffle, Trash2, X, Square, Hand, FolderOpen, Plus, LogOut, RotateCcw, BookOpen, Zap, Users } from 'lucide-react';
 import { BULK_ASSET_TYPES, type BulkAssetType, type Mode } from './characterAssets';
 import { generateImage, generateImageWithRetry, MODEL_NANO_BANANA as MODEL_STANDARD, NEGATIVE_PROMPT, type GenerationRunner, type ModelName } from './utils/geminiApi';
 import { CHECKER_BG, PLACEHOLDER_IMG } from './utils/constants';
@@ -12,6 +12,8 @@ import { AssetGenerationStep } from './components/AssetGenerationStep';
 import { AdjustmentStep } from './components/AdjustmentStep';
 import { DownloadStep } from './components/DownloadStep';
 import { LineArtExtractModal } from './components/LineArtExtractModal';
+import { AdminUserModal } from './components/AdminUserModal';
+import { supabase } from './utils/supabaseClient';
 import type { StaminaInfo, StudioProps } from './components/studioTypes';
 
 const LOCAL = isLocalDev();
@@ -60,6 +62,7 @@ export default function App({ userId, isAdmin, onShowGuide }: AppProps) {
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const [projectList, setProjectList] = useState<ProjectRow[]>([]);
   const [showProjectPicker, setShowProjectPicker] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [isLoadingProject, setIsLoadingProject] = useState(true);
   const [newProjectName, setNewProjectName] = useState('');
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -528,6 +531,11 @@ ${baseFreeText ? `\n## 追加指示\n- ${baseFreeText}` : ''}`;
     setStep(1);
   };
 
+  useEffect(() => {
+    if (LOCAL || !userId) return;
+    void supabase.rpc('touch_last_seen');
+  }, [userId, LOCAL]);
+
   const restoreProjectFromDb = async (projectId: string) => {
     const full = await loadProject(projectId);
     const d = full.project;
@@ -710,6 +718,16 @@ ${baseFreeText ? `\n## 追加指示\n- ${baseFreeText}` : ''}`;
             <option value="default">通常モード</option>
             <option value="expert">エキスパートモード</option>
           </select>
+          {isAdmin && !LOCAL && (
+            <button
+              onClick={() => setShowAdminPanel(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-700 text-xs font-bold border border-amber-200 transition-colors"
+              title="ユーザー管理"
+            >
+              <Users size={14} /> ユーザー管理
+            </button>
+          )}
+
           {!LOCAL && (
             <button
               onClick={() => signOut()}
@@ -1346,6 +1364,8 @@ ${baseFreeText ? `\n## 追加指示\n- ${baseFreeText}` : ''}`;
           </div>
         </div>
       )}
+
+      {showAdminPanel && <AdminUserModal onClose={() => setShowAdminPanel(false)} />}
     </div>
   );
 }

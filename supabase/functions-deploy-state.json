@@ -3,7 +3,11 @@
   "functions": {
     "gemini-image": {
       "hasChanged": false,
-      "hash": "e04fe037c09fb5aa088ce4c58f65648686c309df665b60b992e7a6fbb9efdc41"
+      "hash": "ee254058f3797aa91c34cbb657ab8534f7fce04f79ec4324ae74b77439fd557c"
+    },
+    "admin-users": {
+      "hasChanged": false,
+      "hash": "addba46f3d4df2242ab963047783a476d4540b41b69b7451d4a4e4f9c0d95555"
     }
   }
 }

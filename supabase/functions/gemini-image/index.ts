@@ -66,6 +66,9 @@ Deno.serve(async (req) => {
     return json({ error: "Forbidden" }, 403);
   }
 
+  // Update last_seen_at for retention tracking (non-fatal if it fails)
+  await supabase.rpc("touch_last_seen").catch(() => {});
+
   const declaredLength = Number(req.headers.get("Content-Length") ?? "");
   if (Number.isFinite(declaredLength) && declaredLength > MAX_BODY_BYTES) {
     return json({ error: "Payload too large" }, 413);
